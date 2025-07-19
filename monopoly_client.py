@@ -254,7 +254,7 @@ async def handle_networking(websocket, send_queue: asyncio.Queue):
         
         print("[INFO] sendinng message with name")
         await websocket.send(json.dumps({"name": naam}))
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         # await websocket.send(json.dumps({"type": "connect agknowledged", "uuid": client_uuid}))
         print("[INFO] waiting for msg with my uuid")
         try:

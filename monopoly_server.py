@@ -45,11 +45,16 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
             await game.do_1_turn_1_player()
             turn+=1
             game.check_finished()
+            if game.finished:
+                running = False
             await asyncio.sleep(0)
     except Exception as e:
         print("[ERROR] an exception occured in the game loop, aborting...")
         shutdown_event.set()
         raise e
+    print(f"[GAME] WE HAVE A WINNER: CONGRATZ TO {game.winner}")
+    shutdown_event.set()
+    return
 
 
 

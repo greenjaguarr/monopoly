@@ -214,14 +214,14 @@ class GameLogic_async:
         self.throw = self.__throw_dice()
         self.currently_playing_client.most_recent_diceroll = self.throw
         await self.broadcast_gamestate()
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         self.currently_playing_client.walk(steps = self.throw)
         landing_space = [space for space in self.board.spaces if space.position == self.currently_playing_client.position]
         if not len(landing_space) == 1: raise RuntimeError("")
         landing_space = landing_space[0]
         print(f"Player {self.currently_playing_client} landed on {landing_space}; sending broadcast to inform everyone")
         await self.broadcast_gamestate()
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         try:
             await landing_space.on_land(self.currently_playing_client)
         except Exception as e:
@@ -238,7 +238,7 @@ class GameLogic_async:
         await self.send_queue.put(msg.msg)
         # send final gamestate update
         await self.broadcast_gamestate()
-        await asyncio.sleep(1)
+        await asyncio.sleep(0)
         
 
     def check_finished(self):

@@ -1,15 +1,6 @@
 # THIS NEEDS TO BE COMPLETELY REFACTORED ; it is now 17-7-2025 12:53; this is the minimum viable product
 from typing import Any
 
-
-class Action():
-    def __init__(self):
-        self.types = []
-
-
-def validate_action_msg_beforethrowreply():
-    pass
-
 class actionTypes():
     def __init__(self):
         self.before_throw_menu = "before throw menu"
@@ -45,8 +36,31 @@ class actionTypes():
                 print(f"[WARNING] couldnt verify unknown action type {action_type}")
                 return False
 
+class PlayerActionRequest:
+    def __init__(self, name: str, valid_responses: list[str]):
+        self.name = name
+        self.valid_responses = valid_responses
+        self.reply = name + ' reply'
+
+    def validate_response(self, response: str) -> bool:
+        return response in self.valid_responses
+
+    def __repr__(self)->str:
+        return f"PlayerActionRequest(name={self.name!r}, valid_responses={self.valid_responses!r})"
+    
+    def serialise(self)->dict:
+        # the output of this function should be a valid input for json.dumps()
+        pass
+
+    def validate_cmp_myself(self, test:dict)->bool:
+        pass
+
+    def validate_reply(self)->bool:
+        pass
+
+
 global actionType
 actionType = actionTypes()
 
 if __name__ == "__main__":
-    action_beforethrowmenureply = Action(valid_actions = ['throw', 'buy/sell house', 'mortgage', 'request trade'], validate_action_message = validate_action_msg_beforethrowreply)
+    pass
