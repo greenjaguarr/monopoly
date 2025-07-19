@@ -91,7 +91,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                             case actionType.wannabuy_property:
                                 await send_queue.put({'type': 'action',
                                                       'action': button.text,
-                                                      'action type': action_type_requested})
+                                                      'action type': actionType.wannabuy_property_reply})
                         break
         # draw
         await asyncio.sleep(0)

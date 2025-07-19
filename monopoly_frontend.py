@@ -32,9 +32,14 @@ class Player_representation:  #NOTE doing this representaion is smart and I will
 
 class Board_representation:
     def __init__(self, spaces:dict):
+        # print("Making board represenstation")
+        # print(spaces)
         # spaces: dict[int, space_representation]
         # Sort the spaces by their integer keys (0-39) and store as a list
-        self.spaces = [spaces[i] for i in sorted(spaces.keys())]
+        # self.spaces = [spaces[i] for i in sorted(spaces.keys())]
+        self.spaces = list(spaces.values())
+        # print("Making board represenstation, self.spaces")
+        # print(self.spaces)
         
 
 
@@ -233,15 +238,20 @@ def draw_players(screen:pygame.Surface, players:List[Player_representation], fon
         # draw player info
         __draw_player_info(player, i, font, screen, board)
 
-def __draw_player_info(player:Player_representation, i:int, font, screen, board):
+def __draw_player_info(player:Player_representation, i:int, font, screen, board:Board_representation):
     y_start = 150 + 150*i
     text_name = Text_plate(RED, 200, y_start, f'PLayer {player.name}', LIGHTGREY, font)
     text_name.draw(screen)
     text_money = Text_plate(RED, 200, y_start + 30, f'Money: {player.money}', LIGHTGREY, font)
     text_money.draw(screen)
     this_players_properties_positions = sorted(player.properties)
+    print(f"[DEBUG] frontend: drawing player properties: {this_players_properties_positions}") # This value is correct, so the code works up until at least here
     if this_players_properties_positions:
-        properties_str = ", ".join(str(pos) for pos in this_players_properties_positions)
+        properties_names = []
+        for pos in this_players_properties_positions:
+            name = board.spaces[pos].get('name', None)
+            properties_names.append(str(name))
+        properties_str = ", ".join(properties_names)
     else:
         properties_str = "None"
     text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)

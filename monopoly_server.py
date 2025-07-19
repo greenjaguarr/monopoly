@@ -144,6 +144,7 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
             valid:bool = game.actionType.validate_action(action_type, action)
             if not valid:
                 print("[WARNING] action is not valid")
+                print(action, action_type)
                 return False
             print("[INFO] matching action type")
             # we got an action from the client that is totally valid etc, so NOW comes the logic of handling it
@@ -155,7 +156,12 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
                     client.most_recent_action = player_action
                     client.input_event.set()
                 case game.actionType.wannabuy_property_reply:
-                    raise NotImplementedError("receiving a reply to the requst: want to buy property? is not implemented")
+                    print("[INFO] action type is actionType.before_throw_menu_reply")
+                    player_action = {'choice': action,
+                                     'action type': action_type}
+                    client.most_recent_action = player_action
+                    client.input_event.set()
+                    # raise NotImplementedError("receiving a reply to the requst: want to buy property? is not implemented")
                 case _:
                     print("[WARNING] action type not recognized.", action_type)
                     pass

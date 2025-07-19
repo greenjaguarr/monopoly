@@ -100,6 +100,12 @@ class Property(Space, ABC):
 
     async def offer_purchase(self,client:Connection): # this funciton requires client input. fOllow the exaple set by GameLogic_async.__before_throw_menu
         print(f"[GAME CONTROL FLOW INFO] {client.name} can buy {self.name} for ${self.price}.")
+
+
+        # This should be a function: async def get_user_action(expected_action:actionTypes, client:Connection)
+        # I cant make it yet, since I first need to completelyrework the actionTpes system, by making a proper class and so forth
+        # This is one place where the function is used, but it should be used every time there is a Button menu for any of the clients
+        # ---------------------------------------------------------------------------------------------
         input_is_valid = False
         while not input_is_valid:
             self.game.waiting_on_client = client
@@ -119,7 +125,11 @@ class Property(Space, ABC):
                 print(f"[WARNING] player {client} sent an invalid action")           # TODO add more advances error feedback
                 continue
             input_is_valid = True # and fall out of the loop
-        # reset some stuff
+
+        # reset some stuff # This is the standard reset and agknowledgemetn after receiving valid input
+        assert self.game.waiting_on_client == self.game.currently_playing_client
+        message = Message(client = self.game.waiting_on_client, msg = {'type': 'agnowledge correct action reply'})
+        await self.game.send_queue.put(message.msg)
         self.game.waiting_on_client = None # we are not waiting on client input, we can continue executing
         self.game.waiting_for_actionType = None # There is no waiting so there is no actionType to wait for
         # Now that player input it taken, it is processed
@@ -131,6 +141,7 @@ class Property(Space, ABC):
                 return
             case _:
                 raise RuntimeError("Unreachable")
+        # --------------------------------------------------------------------------------------------------------
 
     async def on_land(self,player:Connection):
         if self.owner is None:
@@ -364,7 +375,7 @@ class GO(Space):
     
 
 class GoToJail(Space):
-    JailPosition = 9
+    JailPosition = 10
     def __init__(self, game:GameLogic_async):
         super().__init__(position = 30, name = "Go to jail", game=game)
     async def on_land(self, client:Connection):

@@ -37,7 +37,12 @@ class actionTypes():
                 raise NotImplementedError("validating message actiong build hjouses is nt implemented")
             case self.wannabuy_property:
                 raise NotImplementedError("validating message action buy property is not implemented")
+            case self.wannabuy_property_reply:
+                if not action in self.wannabuy_property_valid: return False
+                return True
+                # raise NotImplementedError("validating message action buy property is not implemented")
             case _:
+                print(f"[WARNING] couldnt verify unknown action type {action_type}")
                 return False
 
 global actionType
