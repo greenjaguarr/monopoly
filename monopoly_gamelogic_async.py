@@ -111,36 +111,6 @@ class GameLogic_async:
                 self.winner = next(iter(self.clients.values()), None)
             await self.broadcast_gamestate()
         print("[INFO] cleaning up disconnects", f'There are {len(self.clients)} players remaining')
-    # async def disconnect_client(self, client_uuid:str):
-    #     print(f"Disconnecting a client")
-    #     print(self.clients)
-    #     print(f'Trying to disconnect uuid {client_uuid}')
-    #     print(f"[DEBUG] {len(self.clients.keys())}")
-    #     if client_uuid in self.clients.keys():
-    #         self.clients.pop(client_uuid)
-    #     print(f"[DEBUG] {len(self.clients.keys())}; Disconnected a client")
-    #     # Remove a client from the player iterator cycle, preserving order and current position
-    #     # Convert the current cycle to a list, preserving order from current position
-    #     if self.players_iterator is None: return # if it isnt assigned yet, then we have not to do anything
-
-    #     if self.currently_playing_uuid == client_uuid:
-    #         self.__next_turn()
-    #     # Reconstruct the player list from the current clients dict, preserving order from the iterator
-    #     all_players = list(self.clients.keys())
-    #     # Remove the client_uuid
-    #     current_players = [uuid for uuid in all_players if uuid != client_uuid]
-    #     if len(current_players) < 2:
-    #         self.finished = True
-    #         self.winner = current_players[0] if current_players else None
-    #         return
-    #     # Find the current position in the new list
-    #     try:
-    #         idx = current_players.index(self.currently_playing_uuid)
-    #     except ValueError:
-    #         idx = 0
-    #     ordered_players = current_players[idx:] + current_players[:idx]
-    #     self.players_iterator = cycle(ordered_players)
-    #     await self.broadcast_gamestate()
 
     # Game startup
     async def wait_for_players_to_join(self):
@@ -159,8 +129,104 @@ class GameLogic_async:
 
    
     # Game logic and flow
+
+    def ____buysell_inner(self,locations:List[int]):
+                # Handle Ons Dorp city
+        city_locations = locations
+        city = [street for street in self.board if street.position in city_locations]
+        assert all([isinstance(street, Street) for street in city])
+        print(f"[GAME FLOW] {self.currently_playing_client.name} selected Ons Dorp for buy/sell houses")
+        city_distribution = [street.house_count for street in city]
+        city_desired = [street.house_count for street in city]
+        action_houses_city = PlayerActionRequest(f'buy sell houses amount {len(city_locations)}')
+
+        confirm_inner = False
+        while True:
+
+            desired_change = action_houses_city.take_player_input(self)
+            match desired_change:
+                case 'increase 1':
+                    city_desired[0]+=1
+                case 'decrease 1':
+                    city_desired[0]-=1
+                case 'increase 2':
+                    city_desired[1]+=1
+                case 'decrease 2':
+                    city_desired[1]-=1
+                case 'increase 3':
+                    city_desired[2]+=1
+                case 'decrease 3':
+                    city_desired[2]-=1
+                case 'back':
+                    break
+                case 'finish':
+                    confirm_inner = True
+                    break
+                case _:
+                    raise RuntimeError("Unreachable")
+        if confirm_inner:
+            difference = [int(desired) - int(current) for current, desired in zip(city_distribution, city_desired)]
+            for i, diff in enumerate(difference):
+                while not diff == 0:
+                    if diff>0:
+                        city[i].build_house()
+                        self.currently_playing_client.pay(city[i].HOUSE_COST)
+                    elif diff<0:
+                        city[i].sell_house()
+                        self.currently_playing_client.receive(city[i].HOUSE_COST // 2)
+        else:
+            pass # we dont execute the requested changes
     async def __buysell_houses(self):
-        raise NotImplementedError("[ERROR] buying and selling houses is not implemented")
+        self.currently_playing_client.update_completed_sets()
+        # raise NotImplementedError("[ERROR] buying and selling houses is not implemented")
+        print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the buy/sell houses menu")
+        action_which_city_menu = PlayerActionRequest('buy sell houses city menu')
+        
+        finished = False
+        while not finished:
+            valid_choice_of_city = self.currently_playing_client.complete_sets
+            choice: str = await action_which_city_menu.take_player_input(self)
+
+            match choice:
+                case 'ons dorp':
+                    # Handle Ons Dorp city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([1,3])
+                case 'arnhem':
+                    # Handle Arnhem city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([6,8,9])
+                case 'haarlem':
+                    # Handle Haarlem city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([11,13,14])
+                case 'utrecht':
+                    # Handle Utrecht city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([16,18,19])
+                case 'groningen':
+                    # Handle Groningen city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([21,23,24])
+                case 'den haag':
+                    # Handle Den Haag city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([26,27,29])
+                case 'rotterdam':
+                    # Handle Rotterdam city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([31,32,34])
+                case 'amsterdam':
+                    # Handle Amsterdam city
+                    if choice not in valid_choice_of_city: continue
+                    self.____buysell_inner([37,39])
+                case 'return':
+                    finished = True
+                case _:
+                    raise RuntimeError("Unreachable")
+        print("[GAME FLOW] Player is exiting the buy houses menu")
+
+
     async def __change_mortgages(self):
         raise NotImplementedError("[ERROR] mortgaging is not implemented")
     async def __offer_trade(self):
@@ -178,12 +244,12 @@ class GameLogic_async:
             raise e
         if not choice == 'throw':
             handlers = {
-                'buy/sell house': await self.__buysell_houses(),
-                'mortgage': await self.__change_mortgages(),
-                'request trade': await self.__offer_trade()
+                'buy/sell house': self.__buysell_houses,
+                'mortgage': self.__change_mortgages,
+                'request trade': self.__offer_trade
             }
             choice_func = handlers[choice]
-            choice_func()
+            await choice_func()
             await self.__before_throw_menu() # recursive. The exit condition is when they want to throw dice
         return
     

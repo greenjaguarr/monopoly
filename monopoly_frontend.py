@@ -280,7 +280,17 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             yes_button.draw(screen)
             no_button.draw(screen)
             return yes_button, no_button
-            
+        
+        case "buy sell houses city menu":
+            text = Text_plate(RED, 435, 110, 'buy or sell houses at', LIGHTGREY, font)
+            buttons = []
+            for i,option in enumerate(['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam', 'return']):
+
+                button = Button(400 + 150* (i%2), 180 + 100* (i//2), 120, 80, f'buy or sell houses at {option}', font, BLUE, CYAN, RED)
+                button.draw(screen)
+                buttons.append(button)
+            return buttons
+
         case _:
             print("Unknown action type", action_type_requested)
             raise RuntimeError("action type that is requested is not recognised")

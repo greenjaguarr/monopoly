@@ -145,22 +145,25 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
 
 
             match reply.action_type_reply:
-                case 'before throw menu reply':
-                    print("[INFO] action type is: before throw menu reply")
-                    player_action = {'choice': reply.choice,
-                                     'action type': reply.action_type_reply}
-                    client.most_recent_action = player_action
-                    client.input_event.set()
-                case 'want to buy property reply':
-                    print("[INFO] action type is: want to buy property")
-                    player_action = {'choice': reply.choice,
-                                     'action type': reply.action_type_reply}
-                    client.most_recent_action = player_action
-                    client.input_event.set()
+                # case 'before throw menu reply':
+                #     print(f"[INFO] action type is: {reply.action_type_reply}")
+                #     player_action = {'choice': reply.choice,
+                #                      'action type': reply.action_type_reply}
+                #     client.most_recent_action = player_action
+                #     client.input_event.set()
+                # case 'want to buy property reply':
+                #     print(f"[INFO] action type is: want to buy property")
+                #     player_action = {'choice': reply.choice,
+                #                      'action type': reply.action_type_reply}
+                #     client.most_recent_action = player_action
+                #     client.input_event.set()
                     # raise NotImplementedError("receiving a reply to the requst: want to buy property? is not implemented")
                 case _:
-                    print("[WARNING] action type not recognized.", reply)
-                    pass
+                    print(f"[INFO] action type is: {reply.action_type_reply}")
+                    player_action = {'choice': reply.choice,
+                                     'action type': reply.action_type_reply}
+                    client.most_recent_action = player_action
+                    client.input_event.set()
             return True
 
         case 'disconnect':

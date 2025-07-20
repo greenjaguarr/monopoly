@@ -113,6 +113,13 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
+                                case "buy sell houses city menu":
+                                    action_reply = {'type': 'action',
+                                                    'action type': shared_action_request.reply_type,
+                                                    'choice': shared_action_request.valid_responses[i]}
+                                    reply = PlayerActionReply(action_reply)
+                                    msg = reply.serialise_reply()
+                                    await send_queue.put(msg)
                             break
         # draw
         await asyncio.sleep(0)

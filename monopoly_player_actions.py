@@ -1,5 +1,5 @@
 # THIS NEEDS TO BE COMPLETELY REFACTORED ; it is now 17-7-2025 12:53; this is the minimum viable product
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 from monopoly_message import Message
 from monopoly_connection import ClientDisconnectedError
 # from monopoly_gamelogic_async import GameLogic_async
@@ -16,8 +16,11 @@ class PlayerActionBase:
     def __init__(self):
         self.__add_action('before throw menu', ['throw', 'buy/sell house', 'mortgage', 'request trade'])
         self.__add_action('want to buy property', ['yes', 'no'])
-        print('[DEBUG]', self.valid_actions)
-        print('[DEBUG]', self.valid_action_replys)
+        self.__add_action("buy sell houses city menu",  ['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam', 'return'])
+        self.__add_action('buy sell houses amount 2', ['increase 1','increase 2', 'decrease 1', 'decrease 2', 'back','finish'])
+        self.__add_action('buy sell houses amount 3', ['increase 1','increase 2','increase 3', 'decrease 1', 'decrease 2', 'decrease 3', 'back', 'finish'])
+        # print('[DEBUG]', self.valid_actions)
+        # print('[DEBUG]', self.valid_action_replys)
 
     def __add_action(self, action_type:str, valid_responses:List[str])->None:
         self.valid_actions.update({action_type: valid_responses})
@@ -69,7 +72,9 @@ class PlayerActionRequest(PlayerActionBase):
         return all(isinstance(item, str) for item in valid_responses)
 
     # async def take_player_input(self, game: GameLogic_async) -> str:
-    async def take_player_input(self, game) -> str:
+    async def take_player_input(self, game, extra_display_info:Optional[dict] = None) -> str:
+        if extra_display_info:
+            raise NotImplementedError("appendign extra dta is not yet supported")
         game.waiting_on_client = game.currently_playing_client
         game.waiting_for_actionType = self.action_type
         while True:
