@@ -144,6 +144,7 @@ async def read_messages(websocket):
         "game is starting",
         "action request",
         "disconnect",
+        'disconnect information', # this means some one else disconnected
         'acknowledge correct action reply',
         'game control flow',
     ]
@@ -236,6 +237,8 @@ async def read_messages(websocket):
                 case 'game control flow':
                     content = payload.get('content', None)
                     print(f'Received update about game control flow {content}')
+                case 'disconnect information':
+                    pass
                 case _:
                     print(f"[WARNING] Unknown message type received: {typpe}")
                 

@@ -9,7 +9,7 @@ import asyncio
 import websockets
 import json
 from monopoly_message import Message
-from monopoly_connection import Connection
+from monopoly_connection import Connection, ClientDisconnectedError
 # TODO add gamestate lock, to stop race conditions from happening when the gamestate is modified and used at the same time
 from monopoly_player_actions import PlayerActionRequest
 
@@ -17,7 +17,7 @@ from monopoly_player_actions import PlayerActionRequest
 
 
 class GameLogic_async:
-    number_of_players_to_start = 2 # TODO make this not hard-coded
+    number_of_players_to_start = 3 # TODO make this not hard-coded
     def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
         self.clients:dict[str:Connection] = {}
@@ -62,6 +62,9 @@ class GameLogic_async:
         print("[DEBUG] broadcasting")
         await asyncio.sleep(0.1)
         for client_uuid, client in self.clients.items():
+            if client.soft_disconnected:
+                print(f'[DEBUG] dont broadcast to client {client} because they are soft disconnected')
+                continue
             print(f"[DEBUG] broadcast target: {client}")
             msg = Message(client, msg_content)
             await self.send_queue.put(msg.msg)
@@ -84,9 +87,12 @@ class GameLogic_async:
         await self.broadcast_gamestate()
 
     def mark_client_as_disconnected(self, client_uuid):
+        # may raise keyError
         self.clients[client_uuid].soft_disconnected = True
+        
 
     async def cleanup_disconnect(self):
+        print("[GAME FLOW] cleaning up disconnects", f'There are {len(self.clients)} players remaining')
         if any(client.soft_disconnected for client in self.clients.values()):
             disconnected_uuids = [uuid for uuid, client in self.clients.items() if client.soft_disconnected]
             for uuid in disconnected_uuids:
@@ -167,7 +173,7 @@ class GameLogic_async:
         action_before_throw_menu = PlayerActionRequest('before throw menu')
         try:
             choice:str = await action_before_throw_menu.take_player_input(self)
-        except RuntimeError as e:
+        except ClientDisconnectedError as e:
             print("[INFO] before throw menu is endind because the current player disconnected")
             raise e
         if not choice == 'throw':
@@ -228,6 +234,9 @@ class GameLogic_async:
         await asyncio.sleep(0.1)
         try:
             await landing_space.on_land(self.currently_playing_client)
+        except ClientDisconnectedError as e:
+            print(f"[ERROR] While player {self.currently_playing_client} landed on {landing_space}, the player disconnected during the on_land function with errormessage: {e}")
+            raise e
         except Exception as e:
             print(f"[ERROR] While player {self.currently_playing_client} landed on {landing_space}, an issue occures during the on_land function with errormessage: {e}")
             raise e
@@ -246,6 +255,7 @@ class GameLogic_async:
         
 
     def check_finished(self):
+        print("[GAME FLOW] checking if the game is finished")
         not_finished_count = 0
         for uuid, client in self.clients.items():
             if not client.has_lost:

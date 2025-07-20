@@ -3,6 +3,11 @@ import websockets
 import asyncio
 from typing import Optional
 
+class ClientDisconnectedError(Exception):
+    """Raised when a client disconnects from the server."""
+    pass
+
+
 class Connection(Player):
     def __init__(self, naam:str, ws:websockets.ServerProtocol, uuid:str, input_event:asyncio.Event):
         super().__init__(naam)
@@ -22,7 +27,7 @@ class Connection(Player):
                 await asyncio.wait_for(self.input_event.wait(), timeout=5)
             except asyncio.TimeoutError:
                 if self.soft_disconnected:
-                    raise RuntimeError(f"Player {self.name} soft disconnected.")
+                    raise ClientDisconnectedError(f"Player {self.name} soft disconnected.")
                 continue
             self.input_event.clear()
             print(f"[INFO] received player {self.name} action {self.most_recent_action} (client.wait_for_client_input)")

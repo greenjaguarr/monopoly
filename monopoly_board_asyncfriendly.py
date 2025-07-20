@@ -8,7 +8,7 @@ from monopoly_message import Message
 if TYPE_CHECKING:
     # from monopoly_player import Player
     from monopoly_gamelogic_async import Connection, GameLogic_async
-from monopoly_player_actions import PlayerActionReply, PlayerActionRequest
+from monopoly_player_actions import PlayerActionReply, PlayerActionRequest, ClientDisconnectedError
 
 
 class Cards:
@@ -82,6 +82,7 @@ class Property(Space, ABC):
             self.owner = client
             client.properties.append(self)
             print(f"{client.name} bought {self.name} for ${self.price}")
+            client.update_completed_sets()
         else:
             print(f"{self.name} is not available for purchase for you.")
 
@@ -103,8 +104,10 @@ class Property(Space, ABC):
         print(f"[GAME CONTROL FLOW INFO] {client.name} can buy {self.name} for ${self.price}.")
 
         action_want_to_buy_property = PlayerActionRequest('want to buy property')
-        choice:str = await action_want_to_buy_property.take_player_input(self.game)
-
+        try:
+            choice:str = await action_want_to_buy_property.take_player_input(self.game)
+        except ClientDisconnectedError as e:
+            raise e
         match choice:
             case 'yes':
                 self.purchase(client)

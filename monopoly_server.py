@@ -4,7 +4,7 @@ from websockets.asyncio.server import serve
 import websockets.exceptions as wsException
 import websockets
 import json
-from monopoly_gamelogic_async import GameLogic_async, Connection, Message  # Your existing logic
+from monopoly_gamelogic_async import GameLogic_async, Connection, Message, ClientDisconnectedError
 from typing import Optional, Tuple
 import uuid as Uuid
 from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
@@ -43,12 +43,16 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
         while running:
             print("[INFO] New turn is starting; Broadcasting gamestate")
             # await game.broadcast_gamestate()
-            await game.do_1_turn_1_player()
+            try:
+                await game.do_1_turn_1_player()
+            except ClientDisconnectedError as e:
+                print("Client disconenctd, next player's turn")
+                pass
             turn+=1
             game.check_finished()
             if game.finished:
                 running = False
-            game.cleanup_disconnect()
+            await game.cleanup_disconnect()
             await asyncio.sleep(0)
     except Exception as e:
         print("[ERROR] an exception occured in the game loop, aborting...")
@@ -162,8 +166,11 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
         case 'disconnect':
             print(f"[DEBUG] handling incoming message from {client} with type disconnect")
             # await game.disconnect_client(client.uuid) # TODO lets just litterally not do this hahaaha
-            game.mark_client_as_disconnected(client_uuid)
-            msg = {'type': 'disconnect_information',
+            try:
+                game.mark_client_as_disconnected(client_uuid)
+            except KeyError:
+                pass
+            msg = {'type': 'disconnect information',
                    'disconnected client': client.serialise()}
             await game.broadcast(msg)
             return True
@@ -209,7 +216,10 @@ async def receiver(websocket:websockets.ServerProtocol, send_queue:asyncio.Queue
         except wsException.ConnectionClosed:
             print(f"[ERROR] Receiver: Connection closed. Player {name} disconnected")
             # await game.disconnect_client(client_uuid)
-            game.mark_client_as_disconnected(client_uuid)
+            try:
+                game.mark_client_as_disconnected(client_uuid)
+            except KeyError:
+                pass
             break
         except Exception as e:
             print(f"[ERROR] Receiver error: {e} In receiver function, aborting server")

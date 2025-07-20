@@ -1,6 +1,7 @@
 # THIS NEEDS TO BE COMPLETELY REFACTORED ; it is now 17-7-2025 12:53; this is the minimum viable product
 from typing import List, TYPE_CHECKING
 from monopoly_message import Message
+from monopoly_connection import ClientDisconnectedError
 # from monopoly_gamelogic_async import GameLogic_async
 # if TYPE_CHECKING:
 #     from monopoly_gamelogic_async import GameLogic_async
@@ -76,7 +77,7 @@ class PlayerActionRequest(PlayerActionBase):
             await game.send_queue.put(msg.msg)
             try:
                 player_action = await game.currently_playing_client.wait_for_client_input()
-            except RuntimeError as e:
+            except ClientDisconnectedError as e:
                 print("This player disconnected so we stop waiting for their turn")
                 raise e
             try:
