@@ -69,13 +69,14 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
         shutdown_event.set()
         raise e
     print(f"[GAME] WE HAVE A WINNER: CONGRATZ TO {game.winner}")
+    print("[GAME] Game loop is ending, shutting down server")
     shutdown_event.set()
     return
 
 
 
 
-async def sender(send_queue:asyncio.Queue,game:GameLogic_async):
+async def sender(send_queue:asyncio.Queue,game:GameLogic_async): # TODO add timeout logic to this await send_queue.get() so it checks the shutdown event flag
     print("[INFO] Sender func active")
     while True:
         await asyncio.sleep(0)

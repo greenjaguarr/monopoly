@@ -120,6 +120,13 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
+                                case 'buy sell houses' | 'buy sell houses amount 2' | 'buy sell houses amount 3':
+                                    action_reply = {'type': 'action',
+                                                    'action type': shared_action_request.reply_type,
+                                                    'choice': shared_action_request.valid_responses[i]}
+                                    reply = PlayerActionReply(action_reply)
+                                    msg = reply.serialise_reply()
+                                    await send_queue.put(msg)
                             break
         # draw
         await asyncio.sleep(0)
@@ -128,7 +135,19 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
         async with action_request_lock:
             if the_server_is_waiting_for_input_from_me.is_set():
                 if shared_action_request is not None:
-                    buttons = frontend.draw_action_request(shared_action_request.action_type,font, screen)
+                    if hasattr(shared_action_request, 'extra_display_info'):
+                        buttons = frontend.draw_action_request(
+                            shared_action_request.action_type,
+                            font,
+                            screen,
+                            shared_action_request.extra_display_info
+                        )
+                    else:
+                        buttons = frontend.draw_action_request(
+                            shared_action_request.action_type,
+                            font,
+                            screen
+                        )
                 else:
                     print('huh')
             else:
@@ -223,6 +242,12 @@ async def read_messages(websocket):
                     print("[DEBUG] got action request")
                     try:
                         action_requested = PlayerActionRequest(payload.get('action type', None))
+                        action_requested.valid_responses = payload.get('valid responses', [])
+                        print("[DEBUG] action requested:", action_requested)
+                        additional_info = payload.get('extra display info', None)
+                        if additional_info:
+                            print(f"[DEBUG] additional info: {additional_info}")
+                            action_requested.extra_display_info = additional_info
                     except ValueError:
                         # there is an issue with instantiating the action request, most likely the message is invalid
                         continue # to the next message

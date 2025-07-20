@@ -143,8 +143,12 @@ class GameLogic_async:
 
         confirm_inner = False
         while True:
-
-            desired_change = await action_houses_city.take_player_input(self)
+            extra_info = {
+                'city': city[0].city,
+                'city_distribution': city_distribution,
+                'city_desired': city_desired
+            }
+            desired_change = await action_houses_city.take_player_input(self, extra_display_info=extra_info)
             match desired_change:
                 case 'increase 1':
                     city_desired[0]+=1
@@ -166,17 +170,25 @@ class GameLogic_async:
                 case _:
                     raise RuntimeError("Unreachable")
         if confirm_inner:
+            print(f"[GAME FLOW] {self.currently_playing_client.name} confirmed the changes to the houses")
+            print(f"[DEBUG] city distribution: {city_distribution}")
+            print(f"[DEBUG] city desired: {city_desired}")
             difference = [int(desired) - int(current) for current, desired in zip(city_distribution, city_desired)]
             for i, diff in enumerate(difference):
                 while not diff == 0:
                     if diff>0:
                         city[i].build_house()
                         self.currently_playing_client.pay(city[i].HOUSE_COST)
+                        diff-=1
                     elif diff<0:
                         city[i].sell_house()
                         self.currently_playing_client.receive(city[i].HOUSE_COST // 2)
+                        diff+=1
         else:
             pass # we dont execute the requested changes
+        self.broadcast_gamestate()
+        print(f"[GAME FLOW] {self.currently_playing_client.name} exited the buy/sell houses inner loop")
+
     async def __buysell_houses(self):
         self.currently_playing_client.update_completed_sets()
         # raise NotImplementedError("[ERROR] buying and selling houses is not implemented")
@@ -330,6 +342,11 @@ class GameLogic_async:
                 not_finished_count+=1
         if not_finished_count<2:
             self.finished = True
+            for client in self.clients.values():
+                if not client.has_lost:
+                    self.winner = client
+                    print(f"[GAME FLOW] {client.name} has won the game")
+                    break
 
     def __throw_dice(self)->int:
         throw = random.randint(1,6) + random.randint(1,6)

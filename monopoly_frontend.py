@@ -257,7 +257,7 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
     text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
     text_properties.draw(screen)
 
-def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface)->List[Button]:
+def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface, addition_info = None)->List[Button]:
     match action_type_requested:
         case 'before throw menu':
             # print("[DEBUG] Drawing buttons for menu: before throw")
@@ -292,9 +292,47 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             return buttons
         
         case 'buy sell houses amount 2':
-            NotImplemented
+            print("[DEBUG] Drawing buttons for menu: buy sell houses amount 2")
+            print("[DEBUG] action type requested:", action_type_requested)
+            print("[DEBUG] extra display info:", addition_info)
+            if addition_info is None:
+                raise RuntimeError("No additional info provided for buy sell houses amount 2")
+            text = Text_plate(RED, 435, 110, 'select desired house amount', LIGHTGREY, font)
+            buttons = []
+            for i, option in enumerate(['increase 1', 'increase 2', 'decrease 1', 'decrease 2', 'back', 'finish']):
+                button = Button(550 + 150 * (i // 3), 180 + 100 * (i % 3), 120, 80, option, font, BLUE, CYAN, RED)
+                button.draw(screen)
+                buttons.append(button)
+            text.draw(screen)
+            text_city = Text_plate(RED, 435, 150, f'City: {addition_info.get("city", "Unknown")}', LIGHTGREY, font)
+            text_city.draw(screen)
+            text_city_distribution = Text_plate(RED, 435, 180, f'City distribution: {addition_info.get("city_distribution", "Unknown")}', LIGHTGREY, font)
+            text_city_distribution.draw(screen)
+            text_city_desired = Text_plate(RED, 435, 210, f'City desired: {addition_info.get("city_desired", "Unknown")}', LIGHTGREY, font)
+            text_city_desired.draw(screen)
+            return buttons
+
+        
         case 'buy sell houses amount 3':
-            NotImplemented
+            print("[DEBUG] Drawing buttons for menu: buy sell houses amount 3")
+            print("[DEBUG] action type requested:", action_type_requested)
+            print("[DEBUG] extra display info:", addition_info)
+            if addition_info is None:
+                raise RuntimeError("No additional info provided for buy sell houses amount 3")
+            text = Text_plate(RED, 435, 110, 'select desired house amount', LIGHTGREY, font)
+            buttons = []
+            for i, option in enumerate(['increase 1', 'increase 2', 'increase 3', 'decrease 1', 'decrease 2', 'decrease 3', 'back', 'finish']):
+                button = Button(550 + 150 * (i // 4), 180 + 100 * (i % 4), 120, 80, option, font, BLUE, CYAN, RED)
+                button.draw(screen)
+                buttons.append(button)
+            text.draw(screen)
+            text_city = Text_plate(RED, 435, 150, f'City: {addition_info.get("city", "Unknown")}', LIGHTGREY, font)
+            text_city.draw(screen)
+            text_city_distribution = Text_plate(RED, 435, 180, f'City distribution: {addition_info.get("city_distribution", "Unknown")}', LIGHTGREY, font)
+            text_city_distribution.draw(screen)
+            text_city_desired = Text_plate(RED, 435, 210, f'City desired: {addition_info.get("city_desired", "Unknown")}', LIGHTGREY, font)
+            text_city_desired.draw(screen)
+            return buttons
 
         case _:
             print("Unknown action type", action_type_requested)

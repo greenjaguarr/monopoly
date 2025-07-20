@@ -73,12 +73,17 @@ class PlayerActionRequest(PlayerActionBase):
 
     # async def take_player_input(self, game: GameLogic_async) -> str:
     async def take_player_input(self, game, extra_display_info:Optional[dict] = None) -> str:
-        if extra_display_info:
-            raise NotImplementedError("appendign extra dta is not yet supported")
+        # if extra_display_info:
+        #     raise NotImplementedError("appendign extra dta is not yet supported")
         game.waiting_on_client = game.currently_playing_client
         game.waiting_for_actionType = self.reply_type
         while True:
-            msg = Message(game.waiting_on_client, self.serialise_request())
+            content = self.serialise_request()
+            if extra_display_info:
+                print(f"[DEBUG] extra display info: {extra_display_info}")
+                content.update({'extra display info': extra_display_info})
+
+            msg = Message(game.waiting_on_client, content)
             await game.send_queue.put(msg.msg)
             try:
                 player_action = await game.currently_playing_client.wait_for_client_input()
