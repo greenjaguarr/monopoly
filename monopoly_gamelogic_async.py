@@ -242,9 +242,13 @@ class GameLogic_async:
 
 
     async def __change_mortgages(self):
-        raise NotImplementedError("[ERROR] mortgaging is not implemented")
+        # raise NotImplementedError("[ERROR] mortgaging is not implemented")
+        print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the mortgage menu")
+        pass
     async def __offer_trade(self):
-        raise NotImplementedError("[ERROR] offering trades is not implemented")
+        print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the trade offer menu")
+        pass
+        # raise NotImplementedError("[ERROR] offering trades is not implemented")
 
 
     async def __before_throw_menu(self): # I made this function recursive for the lolz

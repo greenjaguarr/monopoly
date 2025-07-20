@@ -1,7 +1,11 @@
 from typing import TYPE_CHECKING, Set
 
 if TYPE_CHECKING:
-    from monopoly_board import Property, Street
+    try:
+        from monopoly_board import Property
+    except ImportError:
+        from monopoly_board_asyncfriendly import Property
+
 
 class Player: # This is not for online play
     def __init__(self, naam:str):
@@ -41,24 +45,18 @@ class Player: # This is not for online play
         print(f"Player {self.name} received {amount}")
 
     def update_completed_sets(self) -> None:
-        from monopoly_board import Street
         self.complete_sets.clear()
         streets = []
         for propertie in self.properties:
-            print(propertie)
             if propertie.buildable:
                 streets.append(propertie.city)
-        print(streets)
         cities = ['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam']
         for city in cities:
             amount = streets.count(city)
-            print(amount, city)
             if amount ==3:
                 self.complete_sets.add(city)
             if amount == 2 and city in ['ons dorp', 'amsterdam']:
                 self.complete_sets.add(city)
-
-
 
 
         print(f"Updated completed sets for player {self.name}: {self.complete_sets}")

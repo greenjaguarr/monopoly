@@ -1,7 +1,7 @@
 import pygame
 from monopoly_gamelogic_async import Connection, GameLogic_async
 from typing import List, Optional
-from monopoly_board import Space, Street, Station, Utility, Tax, CardSpace, FreeParking, GoToJail, GO, Property, Board
+
 # from monopoly_player_actions import actionType
 
 
@@ -346,3 +346,10 @@ def draw_throw(screen:pygame.Surface, throw:int, font, name:str):
 # Utility functions for buttons, popups, etc. (already present)
 
 # You can add more functions as needed for cards, trades, etc.
+
+def draw_game_finished(screen:pygame.Surface, font:pygame.font.Font, winner_name:str):
+    screen.fill((0, 0, 0))  # Clear the screen with black
+    finished_text = Text_plate(WHITE, 300, 400, f'Game Over! Winner: {winner_name}', (0, 128, 0), font)
+    finished_text.draw(screen)
+    pygame.display.flip()  # Update the display to show the game over message
+    pygame.time.delay(1000*10)  # Wait for a few seconds before closing

@@ -47,6 +47,9 @@ async def draw_based_on_state(screen, font, state):
             frontend.draw_players(screen, players, font, currently_playing, BOARD)
         if throw and currently_playing:
             frontend.draw_throw(screen, throw, font, currently_playing)
+    if finished:
+        frontend.draw_game_finished(screen, font, currently_playing)
+    return finished
 
 
 async def pygame_loop(websocket, send_queue: asyncio.Queue):
@@ -131,7 +134,8 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
         # draw
         await asyncio.sleep(0)
         frontend.draw_board_background(screen)
-        await draw_based_on_state(screen, font, state)
+        finished:bool = await draw_based_on_state(screen, font, state)
+        running = not finished
         async with action_request_lock:
             if the_server_is_waiting_for_input_from_me.is_set():
                 if shared_action_request is not None:
@@ -152,12 +156,12 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                     print('huh')
             else:
                 buttons = None
-        if buttons and frame%10 == 0:
-            print("[DEBUG] received buttons; waiting for input")
         pygame.display.flip()
     # do generic pygame stuff
     # if a player does something, we might need to tell this to the server. to do this, we put a message in the send_queue
     # read the global variable "state", and draw the board based on this information
+    shutdown_event.set()
+    print("[INFO] pygame loop is shutting down")
     pygame.quit()
 
 
