@@ -74,7 +74,11 @@ class PlayerActionRequest(PlayerActionBase):
         while True:
             msg = Message(game.waiting_on_client, self.serialise_request())
             await game.send_queue.put(msg.msg)
-            player_action = await game.currently_playing_client.wait_for_client_input()
+            try:
+                player_action = await game.currently_playing_client.wait_for_client_input()
+            except RuntimeError as e:
+                print("This player disconnected so we stop waiting for their turn")
+                raise e
             try:
                 print("[DEBUG] received reply to player action request from player ", player_action)
                 reply = PlayerActionReply(player_action)

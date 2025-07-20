@@ -48,6 +48,7 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
             game.check_finished()
             if game.finished:
                 running = False
+            game.cleanup_disconnect()
             await asyncio.sleep(0)
     except Exception as e:
         print("[ERROR] an exception occured in the game loop, aborting...")
@@ -160,7 +161,8 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
 
         case 'disconnect':
             print(f"[DEBUG] handling incoming message from {client} with type disconnect")
-            await game.disconnect_client(client.uuid) # TODO lets just litterally not do this hahaaha
+            # await game.disconnect_client(client.uuid) # TODO lets just litterally not do this hahaaha
+            game.mark_client_as_disconnected(client_uuid)
             msg = {'type': 'disconnect_information',
                    'disconnected client': client.serialise()}
             await game.broadcast(msg)
@@ -206,7 +208,8 @@ async def receiver(websocket:websockets.ServerProtocol, send_queue:asyncio.Queue
             if succes: print("[INFO] message handled succesfully")
         except wsException.ConnectionClosed:
             print(f"[ERROR] Receiver: Connection closed. Player {name} disconnected")
-            await game.disconnect_client(client_uuid)
+            # await game.disconnect_client(client_uuid)
+            game.mark_client_as_disconnected(client_uuid)
             break
         except Exception as e:
             print(f"[ERROR] Receiver error: {e} In receiver function, aborting server")

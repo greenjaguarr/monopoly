@@ -11,13 +11,19 @@ class Connection(Player):
         self.most_recent_action:Optional[dict] = None
         self.input_event = input_event
         self.input_event.clear()
+        self.soft_disconnected = False
 
     def __repr__(self):
         return f'{self.name}; uuid {self.uuid}'
     
-    async def wait_for_client_input(self)->dict:
-        print("THIS NEEDS TO BE UPDATED")
-        await self.input_event.wait()
-        self.input_event.clear()
-        print(f"[INFO] received player {self.name} action {self.most_recent_action})this is the client.wait fro clint input func")
-        return self.most_recent_action
+    async def wait_for_client_input(self) -> dict:
+        while True:
+            try:
+                await asyncio.wait_for(self.input_event.wait(), timeout=5)
+            except asyncio.TimeoutError:
+                if self.soft_disconnected:
+                    raise RuntimeError(f"Player {self.name} soft disconnected.")
+                continue
+            self.input_event.clear()
+            print(f"[INFO] received player {self.name} action {self.most_recent_action} (client.wait_for_client_input)")
+            return self.most_recent_action

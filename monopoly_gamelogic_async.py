@@ -83,36 +83,58 @@ class GameLogic_async:
             self.gameReadyToStart.set()
         await self.broadcast_gamestate()
 
-    async def disconnect_client(self, client_uuid:str):
-        print(f"Disconnecting a client")
-        print(self.clients)
-        print(f'Trying to disconnect uuid {client_uuid}')
-        print(f"[DEBUG] {len(self.clients.keys())}")
-        if client_uuid in self.clients.keys():
-            self.clients.pop(client_uuid)
-        print(f"[DEBUG] {len(self.clients.keys())}; Disconnected a client")
-        # Remove a client from the player iterator cycle, preserving order and current position
-        # Convert the current cycle to a list, preserving order from current position
-        if self.players_iterator is None: return # if it isnt assigned yet, then we have not to do anything
+    def mark_client_as_disconnected(self, client_uuid):
+        self.clients[client_uuid].soft_disconnected = True
 
-        if self.currently_playing_uuid == client_uuid:
-            self.__next_turn()
-        # Reconstruct the player list from the current clients dict, preserving order from the iterator
-        all_players = list(self.clients.keys())
-        # Remove the client_uuid
-        current_players = [uuid for uuid in all_players if uuid != client_uuid]
-        if len(current_players) < 2:
-            self.finished = True
-            self.winner = current_players[0] if current_players else None
-            return
-        # Find the current position in the new list
-        try:
-            idx = current_players.index(self.currently_playing_uuid)
-        except ValueError:
-            idx = 0
-        ordered_players = current_players[idx:] + current_players[:idx]
-        self.players_iterator = cycle(ordered_players)
-        await self.broadcast_gamestate()
+    async def cleanup_disconnect(self):
+        if any(client.soft_disconnected for client in self.clients.values()):
+            disconnected_uuids = [uuid for uuid, client in self.clients.items() if client.soft_disconnected]
+            for uuid in disconnected_uuids:
+                print(f"[INFO] Removing disconnected client: {self.clients[uuid].name} ({uuid})")
+                self.clients.pop(uuid)
+            # Rebuild the player iterator if needed
+            if self.players_iterator is not None and self.clients:
+                ordered_players = list(self.clients.keys())
+                self.players_iterator = cycle(ordered_players)
+                # If the current player was disconnected, advance to the next
+                if self.currently_playing_uuid not in self.clients:
+                    self.__next_turn()
+            # Check if game should finish
+            if len(self.clients) < 2:
+                self.finished = True
+                self.winner = next(iter(self.clients.values()), None)
+            await self.broadcast_gamestate()
+        print("[INFO] cleaning up disconnects", f'There are {len(self.clients)} players remaining')
+    # async def disconnect_client(self, client_uuid:str):
+    #     print(f"Disconnecting a client")
+    #     print(self.clients)
+    #     print(f'Trying to disconnect uuid {client_uuid}')
+    #     print(f"[DEBUG] {len(self.clients.keys())}")
+    #     if client_uuid in self.clients.keys():
+    #         self.clients.pop(client_uuid)
+    #     print(f"[DEBUG] {len(self.clients.keys())}; Disconnected a client")
+    #     # Remove a client from the player iterator cycle, preserving order and current position
+    #     # Convert the current cycle to a list, preserving order from current position
+    #     if self.players_iterator is None: return # if it isnt assigned yet, then we have not to do anything
+
+    #     if self.currently_playing_uuid == client_uuid:
+    #         self.__next_turn()
+    #     # Reconstruct the player list from the current clients dict, preserving order from the iterator
+    #     all_players = list(self.clients.keys())
+    #     # Remove the client_uuid
+    #     current_players = [uuid for uuid in all_players if uuid != client_uuid]
+    #     if len(current_players) < 2:
+    #         self.finished = True
+    #         self.winner = current_players[0] if current_players else None
+    #         return
+    #     # Find the current position in the new list
+    #     try:
+    #         idx = current_players.index(self.currently_playing_uuid)
+    #     except ValueError:
+    #         idx = 0
+    #     ordered_players = current_players[idx:] + current_players[:idx]
+    #     self.players_iterator = cycle(ordered_players)
+    #     await self.broadcast_gamestate()
 
     # Game startup
     async def wait_for_players_to_join(self):
@@ -143,37 +165,11 @@ class GameLogic_async:
         # Step 1: take and validate input action from the client whose turn it is to choose to maybe do something before throwing dice
         print(f"[GAME CONTROL FLOW INFO] {self.currently_playing_client.name} is entering the before throw menu")
         action_before_throw_menu = PlayerActionRequest('before throw menu')
-        choice:str = await action_before_throw_menu.take_player_input(self)
-
-        # #--------------------------------------------------------------------------------------------------------------------------------
-        # input_is_valid = False
-        # while not input_is_valid:
-        #     self.waiting_on_client = self.currently_playing_client
-        #     self.waiting_for_actionType = self.actionType.before_throw_menu_reply
-        #     # We must send to the client the notification that we are waiting for them to give us input
-        #     msg = Message(self.currently_playing_client,
-        #                    {'type': 'action request',
-        #                     'action type': self.actionType.before_throw_menu})
-        #     # await self.send_queue.put(msg) # This should be wrong but it appears to work
-        #     await self.send_queue.put(msg.msg)
-        #     player_action = await self.currently_playing_client.wait_for_client_input()
-        #     assert isinstance(player_action, dict)
-        #     if player_action.get('action type', None) != self.actionType.before_throw_menu_reply:
-        #         print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
-        #         continue # Let them try again
-        #     choice = player_action.get('choice')
-        #     if not choice in self.actionType.before_throw_menu_valid:
-        #         print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
-        #         continue
-        #     input_is_valid = True # and fall out of the loop
-        # # reset some stuff ; agknowledge the correct action reply from the client
-        # assert self.waiting_on_client == self.currently_playing_client
-        # message = Message(client = self.waiting_on_client, msg = {'type': 'agnowledge correct action reply'})
-        # await self.send_queue.put(message.msg)
-        # self.waiting_on_client = None # we are not waiting on client input, we can continue executing
-        # self.waiting_for_actionType = None # There is no waiting so there is no actionType to wait for
-        # #--------------------------------------------------------------------------------------------------------------------------------
-
+        try:
+            choice:str = await action_before_throw_menu.take_player_input(self)
+        except RuntimeError as e:
+            print("[INFO] before throw menu is endind because the current player disconnected")
+            raise e
         if not choice == 'throw':
             handlers = {
                 'buy/sell house': await self.__buysell_houses(),
@@ -203,8 +199,11 @@ class GameLogic_async:
             print("This player is a broke boi so they cant play; NEXT")
             return
         
-        await self.__before_throw_menu()
-        # since the execution escaped the above function, we know the player wants to throw the dice
+        try:
+            await self.__before_throw_menu()
+        except RuntimeError as e:
+            raise e
+            # since the execution escaped the above function, we know the player wants to throw the dice
 
         await asyncio.sleep(0)
 
