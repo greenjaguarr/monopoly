@@ -7,7 +7,8 @@ import asyncio
 from monopoly_message import Message
 if TYPE_CHECKING:
     # from monopoly_player import Player
-    from monopoly_gamelogic_async import Connection, actionType, GameLogic_async
+    from monopoly_gamelogic_async import Connection, GameLogic_async
+from monopoly_player_actions import PlayerActionReply, PlayerActionRequest
 
 
 class Cards:
@@ -101,38 +102,9 @@ class Property(Space, ABC):
     async def offer_purchase(self,client:Connection): # this funciton requires client input. fOllow the exaple set by GameLogic_async.__before_throw_menu
         print(f"[GAME CONTROL FLOW INFO] {client.name} can buy {self.name} for ${self.price}.")
 
+        action_want_to_buy_property = PlayerActionRequest('want to buy property')
+        choice:str = await action_want_to_buy_property.take_player_input(self.game)
 
-        # This should be a function: async def get_user_action(expected_action:actionTypes, client:Connection)
-        # I cant make it yet, since I first need to completelyrework the actionTpes system, by making a proper class and so forth
-        # This is one place where the function is used, but it should be used every time there is a Button menu for any of the clients
-        # ---------------------------------------------------------------------------------------------
-        input_is_valid = False
-        while not input_is_valid:
-            self.game.waiting_on_client = client
-            self.game.waiting_for_actionType = self.game.actionType.wannabuy_property
-            # We must send to the client the notification that we are waiting for them to give us input
-            msg = Message(client,
-                           {'type': 'action request',
-                            'action type': self.game.actionType.wannabuy_property})
-            await self.game.send_queue.put(msg.msg)
-            player_action = await client.wait_for_client_input()
-            assert isinstance(player_action, dict)
-            if player_action.get('action type', None) != self.game.actionType.wannabuy_property_reply:
-                print(f"[WARNING] player {client} sent an invalid action")           # TODO add more advances error feedback
-                continue # Let them try again
-            choice = player_action.get('choice')
-            if not choice in self.game.actionType.wannabuy_property_valid:
-                print(f"[WARNING] player {client} sent an invalid action")           # TODO add more advances error feedback
-                continue
-            input_is_valid = True # and fall out of the loop
-
-        # reset some stuff # This is the standard reset and agknowledgemetn after receiving valid input
-        assert self.game.waiting_on_client == self.game.currently_playing_client
-        message = Message(client = self.game.waiting_on_client, msg = {'type': 'agnowledge correct action reply'})
-        await self.game.send_queue.put(message.msg)
-        self.game.waiting_on_client = None # we are not waiting on client input, we can continue executing
-        self.game.waiting_for_actionType = None # There is no waiting so there is no actionType to wait for
-        # Now that player input it taken, it is processed
         match choice:
             case 'yes':
                 self.purchase(client)
@@ -141,7 +113,6 @@ class Property(Space, ABC):
                 return
             case _:
                 raise RuntimeError("Unreachable")
-        # --------------------------------------------------------------------------------------------------------
 
     async def on_land(self,player:Connection):
         if self.owner is None:

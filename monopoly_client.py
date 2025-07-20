@@ -7,9 +7,21 @@ from typing import Optional, List
 from monopoly_board_asyncfriendly import BoardAsync
 import monopoly_frontend as frontend
 from monopoly_gamelogic_async import GameLogic_async
-from monopoly_player_actions import actionType
+from monopoly_player_actions import PlayerActionReply, PlayerActionRequest
 
 
+# You can use an asyncio.Lock to synchronize access to a shared PlayerActionRequest object.
+# Example setup:
+
+action_request_lock = asyncio.Lock()
+shared_action_request: Optional[PlayerActionRequest] = None
+
+# To update or read shared_action_request safely in coroutines:
+# async with action_request_lock:
+#     shared_action_request = PlayerActionRequest(...)
+#     # or read from shared_action_request
+
+# This ensures only one coroutine accesses/modifies the object at a time.
 # globals
 STATE_LOCK = asyncio.Lock()
 shutdown_event = asyncio.Event()
@@ -41,7 +53,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
     print("[INFO] pygame is waiting to start")
     await start_pygame_event.wait()
     # state is a shared memory block, it gets updated a lot
-    global state, name, action_type_requested
+    global state, name, shared_action_request
     screen, clock, font, buttons = frontend.initialise()
 
     if name:
@@ -78,29 +90,42 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                 # button_clicked = None
                 # if frame%10 == 0:
                 # print("[DEBUG] checking for pressed buttons")
-                for i, button in enumerate(buttons):
-                    if button.is_clicked(event):
-                        # if frame%10 == 0:
-                        print(f"[DEBUG] A button is clicked: {button}")
-                        # button_clicked = button
-                        match action_type_requested:
-                            case actionType.before_throw_menu:
-                                await send_queue.put({'type': 'action',
-                                              'action type': actionType.before_throw_menu_reply,
-                                              'action': actionType.before_throw_menu_valid[i]})
-                            case actionType.wannabuy_property:
-                                await send_queue.put({'type': 'action',
-                                                      'action': button.text,
-                                                      'action type': actionType.wannabuy_property_reply})
-                        break
+                async with action_request_lock:
+                    for i, button in enumerate(buttons):
+                        if button.is_clicked(event):
+                            # if frame%10 == 0:
+                            print(f"[DEBUG] A button is clicked: {button}")
+                            # button_clicked = button
+                            match shared_action_request.action_type:
+                                case'before throw menu':
+                                    choice = shared_action_request.valid_responses[i]
+                                    print(f"[DEBUG] choice is {choice}")
+                                    action_reply = {'type': 'action',
+                                                'action type': shared_action_request.reply_type,
+                                                'choice': shared_action_request.valid_responses[i]}
+                                    reply = PlayerActionReply(action_reply)
+                                    msg = reply.serialise_reply()
+                                    await send_queue.put(msg)
+                                case 'want to buy property':
+                                    action_reply = {'type': 'action',
+                                                'action type': shared_action_request.reply_type,
+                                                'choice': shared_action_request.valid_responses[i]}
+                                    reply = PlayerActionReply(action_reply)
+                                    msg = reply.serialise_reply()
+                                    await send_queue.put(msg)
+                            break
         # draw
         await asyncio.sleep(0)
         frontend.draw_board_background(screen)
         await draw_based_on_state(screen, font, state)
-        if the_server_is_waiting_for_input_from_me.is_set():
-            buttons = frontend.draw_action_request(action_type_requested,font, screen)
-        else:
-            buttons = None
+        async with action_request_lock:
+            if the_server_is_waiting_for_input_from_me.is_set():
+                if shared_action_request is not None:
+                    buttons = frontend.draw_action_request(shared_action_request.action_type,font, screen)
+                else:
+                    print('huh')
+            else:
+                buttons = None
         if buttons and frame%10 == 0:
             print("[DEBUG] received buttons; waiting for input")
         pygame.display.flip()
@@ -119,10 +144,10 @@ async def read_messages(websocket):
         "game is starting",
         "action request",
         "disconnect",
-        'agnowledge correct action reply',
+        'acknowledge correct action reply',
         'game control flow',
     ]
-    global state
+    global state, shared_action_request
     while not shutdown_event.is_set():
         try:
             message = await asyncio.wait_for(websocket.recv(), timeout=5)
@@ -186,20 +211,27 @@ async def read_messages(websocket):
                 case "game is starting":
                     print("[INFO] Game is starting!")
                 case "action request":
-                    global action_type_requested
-                    action_type_requested = payload.get("action type")
-                    print("[INFO] Action requested from server:", action_type_requested)
-                    the_server_is_waiting_for_input_from_me.set()
+                    # global action_type_requested
+                    print("[DEBUG] got action request")
+                    try:
+                        action_requested = PlayerActionRequest(payload.get('action type', None))
+                    except ValueError:
+                        # there is an issue with instantiating the action request, most likely the message is invalid
+                        continue # to the next message
+                    async with action_request_lock:
+                        shared_action_request = action_requested
+                        print("[INFO] Action requested from server:", shared_action_request.action_type)
+                        if shared_action_request is None:
+                            print('[ERROR] shared action request is None')
+                        else:
+                            the_server_is_waiting_for_input_from_me.set()
 
-
-                    # This is not yet implemented
-                    raise NotImplementedError()
                 case "disconnect":
                     print("[INFO] Disconnected by server.")
                     shutdown_event.set()
                     break
-                case 'agnowledge correct action reply':
-                    print("[INFO] got message type: 'agknowledge correct action reply'")
+                case 'acknowledge correct action reply':
+                    print("[INFO] got message type: 'acknowledge correct action reply'")
                     the_server_is_waiting_for_input_from_me.clear()
                 case 'game control flow':
                     content = payload.get('content', None)
@@ -255,7 +287,7 @@ async def handle_networking(websocket, send_queue: asyncio.Queue):
         print("[INFO] sendinng message with name")
         await websocket.send(json.dumps({"name": naam}))
         await asyncio.sleep(0.1)
-        # await websocket.send(json.dumps({"type": "connect agknowledged", "uuid": client_uuid}))
+        # await websocket.send(json.dumps({"type": "connect acknowledged", "uuid": client_uuid}))
         print("[INFO] waiting for msg with my uuid")
         try:
             msg = await asyncio.wait_for(websocket.recv(), timeout=2)

@@ -16,6 +16,7 @@ class Connection(Player):
         return f'{self.name}; uuid {self.uuid}'
     
     async def wait_for_client_input(self)->dict:
+        print("THIS NEEDS TO BE UPDATED")
         await self.input_event.wait()
         self.input_event.clear()
         print(f"[INFO] received player {self.name} action {self.most_recent_action})this is the client.wait fro clint input func")

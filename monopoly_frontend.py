@@ -2,7 +2,7 @@ import pygame
 from monopoly_gamelogic_async import Connection, GameLogic_async
 from typing import List, Optional
 from monopoly_board import Space, Street, Station, Utility, Tax, CardSpace, FreeParking, GoToJail, GO, Property, Board
-from monopoly_player_actions import actionType
+# from monopoly_player_actions import actionType
 
 
 BLACK = (0,0,0)
@@ -259,7 +259,7 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
 
 def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface)->List[Button]:
     match action_type_requested:
-        case actionType.before_throw_menu:
+        case 'before throw menu':
             # print("[DEBUG] Drawing buttons for menu: before throw")
             throw_dice_Button = Button(300, 600, 100, 100, 'throw dice', font, BLUE, CYAN, RED)
             throw_dice_Button.draw(screen)
@@ -272,7 +272,7 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             text = Text_plate(RED, 400, 500, 'Pick an option', LIGHTGREY, font)
             text.draw(screen)
             return throw_dice_Button, buysell_house_Button, mortgage_Button, offer_trade_to_player_Button
-        case actionType.wannabuy_property:
+        case 'want to buy property':
             yes_button = Button(420, 600, 100, 100, 'yes', font, BLUE, CYAN, RED)
             no_button = Button(540, 600, 100, 100, 'no', font, BLUE, CYAN, RED)
             text = Text_plate(RED, 400, 500, 'Do you want to buy this property?', LIGHTGREY, font)

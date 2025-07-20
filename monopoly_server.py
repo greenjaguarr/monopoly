@@ -4,9 +4,10 @@ from websockets.asyncio.server import serve
 import websockets.exceptions as wsException
 import websockets
 import json
-from monopoly_gamelogic_async import GameLogic_async, Connection, Message, actionTypes  # Your existing logic
+from monopoly_gamelogic_async import GameLogic_async, Connection, Message  # Your existing logic
 from typing import Optional, Tuple
 import uuid as Uuid
+from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
 
 clients = set()
 
@@ -15,7 +16,7 @@ GAMESTATE_LOCK = asyncio.Lock()
 # game.wait_for_players_to_join()
 # game.startup()
 
-VALID_MSG_TYPES = ['action', 'disconnect', 'request gamestate', 'i am alive', 'connect spectator']
+VALID_MSG_TYPES = ['action reply', 'disconnect', 'request gamestate', 'i am alive', 'connect spectator']
 
 placeholder_event = asyncio.Event()
 placeholder_event.clear()
@@ -101,7 +102,7 @@ def validate_incoming_msg(message, websocket:websockets.ServerProtocol, game:Gam
         print('message did not contain a type')
         return None, None
     if not typpe in VALID_MSG_TYPES:
-        print("Invalid message type")
+        print("Invalid message type", typpe)
         return None, None
     client_uuid:Optional[str] = payload.get('uuid', None)
     if client_uuid is None:
@@ -124,51 +125,36 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
     client:Connection = game.clients[client_uuid]
     print(f"[DEBUG] handling incoming message from {client}")
     match message['type']:  # Where do we validate that the message type is the type of action taht the game is waiting on?
-        case 'action':      #message contains at least: 'type': 'action', 'action type': any['before throw menu'], 'action': this depends on what the value of 'action type' is
-            print(f"[DEBUG] handling incoming message from {client} with type action")
-            action_type = message.get('action type', None)
-            if action_type is None: 
-                print("[WARNING] couldnt get action_type")
+        case 'action reply':      #message contains at least: 'type': 'action', 'action type': any['before throw menu'], 'action': this depends on what the value of 'action type' is
+            if not game.waiting_on_client == client:
+                print("[WARNING] incorrect client")
                 return False
-            if type(action_type)!= str:
-                print("[WARNING] erronious action type")
+            if not game.waiting_for_actionType == message['action type']:
+                print("[WARNINIG] incorrect action type")
+            try:
+                reply = PlayerActionReply(message)
+            except ValueError:
+                # The messge was defective
+                print("[WARNING] the message was defective")
                 return False
-            if len(action_type) > 100:
-                print("[WARNING] erronious action type")
-                return False
-            action = message.get('action', None)
-            if not isinstance(action, str):
-                print("[WARNING] erronious action type")
-                return False
-            if action is None:
-                print("[WARNING] couldnt get action")
-                return False
-            # veryfy that we are expecting this type of action from this player right now
-            if not action_type == game.waiting_for_actionType:
-                print(f"[ERROR] received action type {action_type} from {client}, but we were expecting a different action type, aborting")
-            valid:bool = game.actionType.validate_action(action_type, action)
-            if not valid:
-                print("[WARNING] action is not valid")
-                print(action, action_type)
-                return False
-            print("[INFO] matching action type")
-            # we got an action from the client that is totally valid etc, so NOW comes the logic of handling it
-            match action_type:
-                case game.actionType.before_throw_menu_reply:
-                    print("[INFO] action type is actionType.before_throw_menu_reply")
-                    player_action = {'choice': action,
-                                     'action type': action_type}
+
+
+            match reply.action_type_reply:
+                case 'before throw menu reply':
+                    print("[INFO] action type is: before throw menu reply")
+                    player_action = {'choice': reply.choice,
+                                     'action type': reply.action_type_reply}
                     client.most_recent_action = player_action
                     client.input_event.set()
-                case game.actionType.wannabuy_property_reply:
-                    print("[INFO] action type is actionType.before_throw_menu_reply")
-                    player_action = {'choice': action,
-                                     'action type': action_type}
+                case 'want to buy property reply':
+                    print("[INFO] action type is: want to buy property")
+                    player_action = {'choice': reply.choice,
+                                     'action type': reply.action_type_reply}
                     client.most_recent_action = player_action
                     client.input_event.set()
                     # raise NotImplementedError("receiving a reply to the requst: want to buy property? is not implemented")
                 case _:
-                    print("[WARNING] action type not recognized.", action_type)
+                    print("[WARNING] action type not recognized.", reply)
                     pass
             return True
 
@@ -258,7 +244,7 @@ async def network_manager(websocket:websockets.ServerProtocol,send_queue:asyncio
     print(f'[INFO] received name {name}')
     client_uuid = str(Uuid.uuid4())
     print(f"[INFO] Sending uuid {client_uuid} to new client {name}")
-    await websocket.send(json.dumps({"type": "connect agknowledged", "uuid": client_uuid}))
+    await websocket.send(json.dumps({"type": "connect acknowledged", "uuid": client_uuid}))
     client = Connection(name, websocket, client_uuid, client_input_event)
     print(f"[DEBUG] Adding client {client} to the game. ")
     await game.add_client(client)
@@ -271,10 +257,9 @@ async def network_manager(websocket:websockets.ServerProtocol,send_queue:asyncio
     print('[INFO] newtowrk manager is closing')
 
 async def main():
-    actionTypesdfg = actionTypes()
     send_queue = asyncio.Queue()
 
-    game = GameLogic_async(send_queue, actionType=actionTypesdfg)  # Your Game class with players, board, etc.
+    game = GameLogic_async(send_queue)  # Your Game class with players, board, etc.
     game_task = asyncio.create_task(game_loop(game, send_queue))  # Start de game loop
     # server_task = serve(network_manager,"IPV4 address", 8000)  # WebSocket server   # send_queue should be an argument but I dont know the syntax
     server_task = serve(lambda ws: network_manager(ws, send_queue, game), "0.0.0.0", 8000) # this lambda shit is some serious garmet shit from chatgpt

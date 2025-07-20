@@ -1,26 +1,24 @@
 import websockets.connection
 from monopoly_board_asyncfriendly import BoardAsync, Cards, Street
 from monopoly_player import Player
-from monopoly_player_actions import actionTypes
+# from monopoly_player_actions import actionTypes
 import random
 from  itertools import cycle
-from typing import Optional, List, Any
+from typing import Optional, List, Any, TYPE_CHECKING
 import asyncio
 import websockets
 import json
 from monopoly_message import Message
 from monopoly_connection import Connection
 # TODO add gamestate lock, to stop race conditions from happening when the gamestate is modified and used at the same time
-
-
+from monopoly_player_actions import PlayerActionRequest
 
 
 
 
 class GameLogic_async:
     number_of_players_to_start = 2 # TODO make this not hard-coded
-    def __init__(self, send_queue: asyncio.Queue, actionType:actionTypes): # do a little bit here, just enough to get off the ground
-        self.actionType = actionType
+    def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
         self.clients:dict[str:Connection] = {}
         self.currently_playing_uuid:str = None
@@ -32,6 +30,8 @@ class GameLogic_async:
         self.waiting_on_client:Optional[Connection] = None
         self.throw:int = 0
         self.players_iterator = None
+        self.waiting_for_actionType:Optional[str] = None
+
 
     # websockets stuff
     def serialise(self)->dict:
@@ -142,32 +142,37 @@ class GameLogic_async:
     async def __before_throw_menu(self): # I made this function recursive for the lolz
         # Step 1: take and validate input action from the client whose turn it is to choose to maybe do something before throwing dice
         print(f"[GAME CONTROL FLOW INFO] {self.currently_playing_client.name} is entering the before throw menu")
-        input_is_valid = False
-        while not input_is_valid:
-            self.waiting_on_client = self.currently_playing_client
-            self.waiting_for_actionType = self.actionType.before_throw_menu_reply
-            # We must send to the client the notification that we are waiting for them to give us input
-            msg = Message(self.currently_playing_client,
-                           {'type': 'action request',
-                            'action type': self.actionType.before_throw_menu})
-            # await self.send_queue.put(msg) # This should be wrong but it appears to work
-            await self.send_queue.put(msg.msg)
-            player_action = await self.currently_playing_client.wait_for_client_input()
-            assert isinstance(player_action, dict)
-            if player_action.get('action type', None) != self.actionType.before_throw_menu_reply:
-                print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
-                continue # Let them try again
-            choice = player_action.get('choice')
-            if not choice in self.actionType.before_throw_menu_valid:
-                print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
-                continue
-            input_is_valid = True # and fall out of the loop
-        # reset some stuff ; agknowledge the correct action reply from the client
-        assert self.waiting_on_client == self.currently_playing_client
-        message = Message(client = self.waiting_on_client, msg = {'type': 'agnowledge correct action reply'})
-        await self.send_queue.put(message.msg)
-        self.waiting_on_client = None # we are not waiting on client input, we can continue executing
-        self.waiting_for_actionType = None # There is no waiting so there is no actionType to wait for
+        action_before_throw_menu = PlayerActionRequest('before throw menu')
+        choice:str = await action_before_throw_menu.take_player_input(self)
+
+        # #--------------------------------------------------------------------------------------------------------------------------------
+        # input_is_valid = False
+        # while not input_is_valid:
+        #     self.waiting_on_client = self.currently_playing_client
+        #     self.waiting_for_actionType = self.actionType.before_throw_menu_reply
+        #     # We must send to the client the notification that we are waiting for them to give us input
+        #     msg = Message(self.currently_playing_client,
+        #                    {'type': 'action request',
+        #                     'action type': self.actionType.before_throw_menu})
+        #     # await self.send_queue.put(msg) # This should be wrong but it appears to work
+        #     await self.send_queue.put(msg.msg)
+        #     player_action = await self.currently_playing_client.wait_for_client_input()
+        #     assert isinstance(player_action, dict)
+        #     if player_action.get('action type', None) != self.actionType.before_throw_menu_reply:
+        #         print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
+        #         continue # Let them try again
+        #     choice = player_action.get('choice')
+        #     if not choice in self.actionType.before_throw_menu_valid:
+        #         print(f"[WARNING] player {self.currently_playing_client} sent an invalid action")           # TODO add more advances error feedback
+        #         continue
+        #     input_is_valid = True # and fall out of the loop
+        # # reset some stuff ; agknowledge the correct action reply from the client
+        # assert self.waiting_on_client == self.currently_playing_client
+        # message = Message(client = self.waiting_on_client, msg = {'type': 'agnowledge correct action reply'})
+        # await self.send_queue.put(message.msg)
+        # self.waiting_on_client = None # we are not waiting on client input, we can continue executing
+        # self.waiting_for_actionType = None # There is no waiting so there is no actionType to wait for
+        # #--------------------------------------------------------------------------------------------------------------------------------
 
         if not choice == 'throw':
             handlers = {
@@ -175,7 +180,7 @@ class GameLogic_async:
                 'mortgage': await self.__change_mortgages(),
                 'request trade': await self.__offer_trade()
             }
-            choice_func = handlers[player_action]
+            choice_func = handlers[choice]
             choice_func()
             await self.__before_throw_menu() # recursive. The exit condition is when they want to throw dice
         return
@@ -257,15 +262,13 @@ class GameLogic_async:
 
 
 async def main():
-    
-    actionTypeasdf = actionTypes()  
 
     kaartenkans = [f"kanskaart {i}" for i in range(10)]
     kaartenalgemeenfonds = [f"algemeen fondskaart {i}" for i in range(10)]
     kaartenkans.append("get out of jail kans")
     kaartenalgemeenfonds.append("get out of jail algemeenfonds")
     send_queue = asyncio.Queue()
-    game = GameLogic_async(send_queue,actionTypeasdf)
+    game = GameLogic_async(send_queue)
     await game.wait_for_players_to_join()
     game.startup()
     #
