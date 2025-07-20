@@ -17,7 +17,7 @@ from monopoly_player_actions import PlayerActionRequest
 
 
 class GameLogic_async:
-    number_of_players_to_start = 3 # TODO make this not hard-coded
+    number_of_players_to_start = 2 # TODO make this not hard-coded
     def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
         self.clients:dict[str:Connection] = {}
@@ -130,10 +130,11 @@ class GameLogic_async:
    
     # Game logic and flow
 
-    def ____buysell_inner(self,locations:List[int]):
+    async def ____buysell_inner(self,locations:List[int]):
+        print("[GAME FLOW] player is now in inner loop of buy sell houses")
                 # Handle Ons Dorp city
         city_locations = locations
-        city = [street for street in self.board if street.position in city_locations]
+        city = [street for street in self.board.spaces if street.position in city_locations]
         assert all([isinstance(street, Street) for street in city])
         print(f"[GAME FLOW] {self.currently_playing_client.name} selected Ons Dorp for buy/sell houses")
         city_distribution = [street.house_count for street in city]
@@ -143,7 +144,7 @@ class GameLogic_async:
         confirm_inner = False
         while True:
 
-            desired_change = action_houses_city.take_player_input(self)
+            desired_change = await action_houses_city.take_player_input(self)
             match desired_change:
                 case 'increase 1':
                     city_desired[0]+=1
@@ -186,40 +187,41 @@ class GameLogic_async:
         while not finished:
             valid_choice_of_city = self.currently_playing_client.complete_sets
             choice: str = await action_which_city_menu.take_player_input(self)
+            print(f"[DEBUG] player made achoice for which city to build on; they chose {choice}")
 
             match choice:
                 case 'ons dorp':
                     # Handle Ons Dorp city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([1,3])
+                    await self.____buysell_inner([1,3])
                 case 'arnhem':
                     # Handle Arnhem city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([6,8,9])
+                    await self.____buysell_inner([6,8,9])
                 case 'haarlem':
                     # Handle Haarlem city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([11,13,14])
+                    await self.____buysell_inner([11,13,14])
                 case 'utrecht':
                     # Handle Utrecht city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([16,18,19])
+                    await self.____buysell_inner([16,18,19])
                 case 'groningen':
                     # Handle Groningen city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([21,23,24])
+                    await self.____buysell_inner([21,23,24])
                 case 'den haag':
                     # Handle Den Haag city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([26,27,29])
+                    await self.____buysell_inner([26,27,29])
                 case 'rotterdam':
                     # Handle Rotterdam city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([31,32,34])
+                    await self.____buysell_inner([31,32,34])
                 case 'amsterdam':
                     # Handle Amsterdam city
                     if choice not in valid_choice_of_city: continue
-                    self.____buysell_inner([37,39])
+                    await self.____buysell_inner([37,39])
                 case 'return':
                     finished = True
                 case _:

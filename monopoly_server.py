@@ -8,6 +8,7 @@ from monopoly_gamelogic_async import GameLogic_async, Connection, Message, Clien
 from typing import Optional, Tuple
 import uuid as Uuid
 from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
+import sys
 
 clients = set()
 
@@ -37,7 +38,16 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
         game.startup()
 
         # await game.broadcast_gamestate()
-
+        print("Sys", sys.argv)
+        if not len(sys.argv) == 1:
+            #  I want to backdoor for testing purposes
+            if sys.argv[1] == 'start_with_streets':
+                client = list(game.clients.values())[0]
+                client.money = 100_000
+                for i in range(40):
+                    space = game.board.spaces[i]
+                    if space.purchasable:
+                        space.purchase(client)
         turn = 0
         running = True
         while running:
@@ -135,7 +145,7 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
                 print("[WARNING] incorrect client")
                 return False
             if not game.waiting_for_actionType == message['action type']:
-                print("[WARNINIG] incorrect action type")
+                print(f"[WARNINIG] incorrect action type; I was waiting for {game.waiting_for_actionType}")
             try:
                 reply = PlayerActionReply(message)
             except ValueError:
@@ -145,19 +155,7 @@ async def handle_message(message:dict, client_uuid:str, send_queue:asyncio.Queue
 
 
             match reply.action_type_reply:
-                # case 'before throw menu reply':
-                #     print(f"[INFO] action type is: {reply.action_type_reply}")
-                #     player_action = {'choice': reply.choice,
-                #                      'action type': reply.action_type_reply}
-                #     client.most_recent_action = player_action
-                #     client.input_event.set()
-                # case 'want to buy property reply':
-                #     print(f"[INFO] action type is: want to buy property")
-                #     player_action = {'choice': reply.choice,
-                #                      'action type': reply.action_type_reply}
-                #     client.most_recent_action = player_action
-                #     client.input_event.set()
-                    # raise NotImplementedError("receiving a reply to the requst: want to buy property? is not implemented")
+                # add special cases later
                 case _:
                     print(f"[INFO] action type is: {reply.action_type_reply}")
                     player_action = {'choice': reply.choice,

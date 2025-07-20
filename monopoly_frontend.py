@@ -286,10 +286,15 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             buttons = []
             for i,option in enumerate(['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam', 'return']):
 
-                button = Button(400 + 150* (i%2), 180 + 100* (i//2), 120, 80, f'buy or sell houses at {option}', font, BLUE, CYAN, RED)
+                button = Button(550 + 150* (i%2), 180 + 100* (i//2), 120, 80, f'buy or sell houses at {option}', font, BLUE, CYAN, RED)
                 button.draw(screen)
                 buttons.append(button)
             return buttons
+        
+        case 'buy sell houses amount 2':
+            NotImplemented
+        case 'buy sell houses amount 3':
+            NotImplemented
 
         case _:
             print("Unknown action type", action_type_requested)

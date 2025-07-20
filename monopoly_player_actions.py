@@ -76,7 +76,7 @@ class PlayerActionRequest(PlayerActionBase):
         if extra_display_info:
             raise NotImplementedError("appendign extra dta is not yet supported")
         game.waiting_on_client = game.currently_playing_client
-        game.waiting_for_actionType = self.action_type
+        game.waiting_for_actionType = self.reply_type
         while True:
             msg = Message(game.waiting_on_client, self.serialise_request())
             await game.send_queue.put(msg.msg)
