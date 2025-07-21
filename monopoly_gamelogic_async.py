@@ -259,9 +259,214 @@ class GameLogic_async:
         # raise NotImplementedError("[ERROR] mortgaging is not implemented")
         print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the mortgage menu")
         pass
+
+
+    async def __offer_trade_what_inner(self, who_initiate_uuid: str, who_target_uuid: str) -> dict:
+        """
+        Inner loop for building a trade offer. Allows initiator to add/remove money and properties to give/get.
+        Returns a dict with 'give' and 'get' keys.
+        """
+        initiator = self.clients[who_initiate_uuid]
+        target = self.clients[who_target_uuid]
+
+        trade = {
+            'give': {'money': 0, 'properties': []},
+            'get': {'money': 0, 'properties': []}
+        }
+
+        while True:
+            # Prepare display info for the menu
+            extra_info = {
+                'your_money': initiator.money,
+                'your_properties': [p.name for p in initiator.properties],
+                'target_money': target.money,
+                'target_properties': [p.name for p in target.properties],
+                'trade': trade
+            }
+            action = PlayerActionRequest('offer trade build', extra_display_info=extra_info)
+            choice = await action.take_player_input(self)
+
+            def validate_is_a_number(choice:str):
+                try:
+                    result = int(choice)
+                    return True
+                except:
+                    return False
+            match choice:
+                case 'add give money':
+                    # Ask how much money to give
+                    amount_action = PlayerActionRequest('offer trade give money amount', extra_display_info=extra_info, validate_response=validate_is_a_number)
+                    amount = await amount_action.take_player_input(self)
+                    try:
+                        amount = int(amount)
+                        if 0 <= amount <= initiator.money:
+                            trade['give']['money'] = amount
+                    except Exception:
+                        pass
+                case 'add get money':
+                    amount_action = PlayerActionRequest('offer trade get money amount', extra_display_info=extra_info, validate_response=validate_is_a_number)
+                    amount = await amount_action.take_player_input(self)
+                    try:
+                        amount = int(amount)
+                        if 0 <= amount <= target.money:
+                            trade['get']['money'] = amount
+                    except Exception:
+                        pass
+                case 'add give property':
+                    # Choose property to give
+                    props = [p.name for p in initiator.properties if p not in trade['give']['properties']]
+                    if not props:
+                        continue
+                    prop_action = PlayerActionRequest('offer trade give property select', valid_responses=props, extra_display_info=extra_info)
+                    prop_name = await prop_action.take_player_input(self)
+                    for p in initiator.properties:
+                        if p.name == prop_name and p not in trade['give']['properties']:
+                            trade['give']['properties'].append(p)
+                            break
+                case 'add get property':
+                    props = [p.name for p in target.properties if p not in trade['get']['properties']]
+                    if not props:
+                        continue
+                    prop_action = PlayerActionRequest('offer trade get property select', valid_responses=props, extra_display_info=extra_info)
+                    prop_name = await prop_action.take_player_input(self)
+                    for p in target.properties:
+                        if p.name == prop_name and p not in trade['get']['properties']:
+                            trade['get']['properties'].append(p)
+                            break
+                case 'remove give property':
+                    props = [p.name for p in trade['give']['properties']]
+                    if not props:
+                        continue
+                    prop_action = PlayerActionRequest('offer trade remove give property', valid_responses=props, extra_display_info=extra_info)
+                    prop_name = await prop_action.take_player_input(self)
+                    trade['give']['properties'] = [p for p in trade['give']['properties'] if p.name != prop_name]
+                case 'remove get property':
+                    props = [p.name for p in trade['get']['properties']]
+                    if not props:
+                        continue
+                    prop_action = PlayerActionRequest('offer trade remove get property', valid_responses=props, extra_display_info=extra_info)
+                    prop_name = await prop_action.take_player_input(self)
+                    trade['get']['properties'] = [p for p in trade['get']['properties'] if p.name != prop_name]
+                case 'reset':
+                    trade = {
+                        'give': {'money': 0, 'properties': []},
+                        'get': {'money': 0, 'properties': []}
+                    }
+                case 'confirm':
+                    return trade
+                case 'cancel':
+                    return None
+                case _:
+                    continue
+
+    async def __offer_trade_what(self, who_initiate_uuid: str, who_target_uuid: str) -> dict:
+        """
+        Wrapper for the trade offer builder.
+        """
+        trade = await self.__offer_trade_what_inner(who_initiate_uuid, who_target_uuid)
+        # validate that this trade is indeed possible: both parties have theright Property and money
+        # Validate that initiator and target have the properties and money they are offering/requesting
+        if trade:
+            initiator = self.clients[who_initiate_uuid]
+            target = self.clients[who_target_uuid]
+            # Validate initiator has enough money and owns the properties they're giving
+            if trade['give']['money'] > initiator.money:
+                return {}
+            if not all(p in initiator.properties for p in trade['give']['properties']):
+                return {}
+            # Validate target has enough money and owns the properties they're giving
+            if trade['get']['money'] > target.money:
+                return {}
+            if not all(p in target.properties for p in trade['get']['properties']):
+                return {}
+        return trade if trade else {}
+
+    async def __offer_trade_accept(self, who_initiate_uuid: str, who_target_uuid: str, trade_suggested: dict) -> bool:
+        """
+        Presents the trade to the target player and asks for accept/reject.
+        """
+        initiator = self.clients[who_initiate_uuid]
+        target = self.clients[who_target_uuid]
+
+        # Prepare a summary of the trade
+        trade_summary = {
+            'from': initiator.name,
+            'to': target.name,
+            'give_money': trade_suggested['give']['money'],
+            'give_properties': [p.name for p in trade_suggested['give']['properties']],
+            'get_money': trade_suggested['get']['money'],
+            'get_properties': [p.name for p in trade_suggested['get']['properties']]
+        }
+
+        action_accept = PlayerActionRequest(
+            'offer trade accept',
+            valid_responses=['accept', 'reject'],
+            extra_display_info=trade_summary,
+            target_player=target
+        )
+        choice = await action_accept.take_player_input(self)
+        return choice == 'accept'
+
     async def __offer_trade(self):
         print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the trade offer menu")
-        return
+        names = [client.name for client in self.clients.values() if client.uuid != self.currently_playing_uuid]
+        options = {client.name: uuid for uuid, client in self.clients.items() if uuid != self.currently_playing_uuid}
+        action_chose_who_to_trade_with = PlayerActionRequest('offer trade menu', valid_responses=[*names, 'cancel'])
+        print(action_chose_who_to_trade_with)
+
+        finished = False
+        while not finished:
+            # take user input
+            choice: str = await action_chose_who_to_trade_with.take_player_input(self)
+            # handle user input
+            match choice:
+                case _ if choice in names:
+                    # Handle the case where the player chose a valid name
+                    target_uuid: str = options[choice]
+                    initiate_uuid: str = self.currently_playing_uuid
+                    trade_suggestion: dict = await self.__offer_trade_what(initiate_uuid, target_uuid)
+                    if not trade_suggestion:
+                        continue  # Cancelled or empty trade
+
+                    trade_get = trade_suggestion.get('get', None)
+                    trade_give = trade_suggestion.get('give', None)
+                    print(f"[INFO] player {self.clients[initiate_uuid].name} wants to trade with {self.clients[target_uuid].name}. They want to give {trade_give} and they want to get {trade_get}")
+
+                    accepted: bool = await self.__offer_trade_accept(initiate_uuid, target_uuid, trade_suggestion)
+                    if accepted:
+                        # Execute the trade
+                        initiator = self.clients[initiate_uuid]
+                        target = self.clients[target_uuid]
+                        # Transfer money
+                        if trade_give and trade_give['money'] > 0:
+                            initiator.pay(trade_give['money'])
+                            target.receive(trade_give['money'])
+                        if trade_get and trade_get['money'] > 0:
+                            target.pay(trade_get['money'])
+                            initiator.receive(trade_get['money'])
+                        # Transfer properties
+                        for p in trade_give['properties']:
+                            if p in initiator.properties:
+                                initiator.properties.remove(p)
+                                p.owner = target
+                                target.properties.append(p)
+                        for p in trade_get['properties']:
+                            if p in target.properties:
+                                target.properties.remove(p)
+                                p.owner = initiator
+                                initiator.properties.append(p)
+                        await self.broadcast_gamestate()
+                        finished = True
+                    else:
+                        continue  # This will allow the initiator to pick a new person to try to trade with
+
+                case 'cancel':
+                    finished = True
+                case _:
+                    raise RuntimeError(f"Unreachable, I got choice {choice}, but I was expecting either cancel or {names}")
+
+        
+
 
         # raise NotImplementedError("[ERROR] offering trades is not implemented")
 
