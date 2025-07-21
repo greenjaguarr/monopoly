@@ -275,6 +275,7 @@ class GameLogic_async:
         }
 
         while True:
+            await asyncio.sleep(0.1)
             print("[INFO] current state of trade: ", trade)
             # Prepare display info for the menu
             extra_info = {
@@ -475,7 +476,8 @@ class GameLogic_async:
         # raise NotImplementedError("[ERROR] offering trades is not implemented")
 
 
-    async def __before_throw_menu(self): # I made this function recursive for the lolz
+    async def __before_throw_menu(self, depth = 0): # I made this function recursive for the lolz
+        if depth == 6: return
         # Step 1: take and validate input action from the client whose turn it is to choose to maybe do something before throwing dice
         print(f"[GAME CONTROL FLOW INFO] {self.currently_playing_client.name} is entering the before throw menu")
         action_before_throw_menu = PlayerActionRequest('before throw menu')
@@ -492,7 +494,7 @@ class GameLogic_async:
             }
             choice_func = handlers[choice]
             await choice_func()
-            await self.__before_throw_menu() # recursive. The exit condition is when they want to throw dice
+            await self.__before_throw_menu(depth + 1) # recursive. The exit condition is when they want to throw dice
         return
     
     def __next_turn(self):

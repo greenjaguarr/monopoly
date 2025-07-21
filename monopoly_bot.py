@@ -41,26 +41,22 @@ class Bot:
                     print("[INFO] the bot decided not to buy the property")
                     return 1
             case 'buy sell houses city menu':
+                # Only proceed if the bot has money and completed sets
                 if me.money < 200:
-                    print('[INFO] the bot decided not to buy or sell houses cuz broke')
+                    print('[INFO] the bot decided not to buy or sell houses because of low funds')
                     return request.valid_responses.index('return')
-                if len(me.completed_sets) == 0:
-                    print('[INFO] the bot decided not to buy or sell houses cuz no sets')
+                if not me.completed_sets:
+                    print('[INFO] the bot decided not to buy or sell houses because no sets are completed')
                     return request.valid_responses.index('return')
-                for city in me.completed_sets:
-                    if random.random() > 0.5:
-                        continue
-                    elif city in self.completely_filled_cities:
-                        print("[DEBUG] This city is full, so we dotn build on it")
-                        pass
-                    else:
-                        return request.valid_responses.index(city)
-                    # correct_button = {i:b for i,b in enumerate(buttons) if city in b.text}
-                    # assert len(correct_button) == 1
-                    # i = correct_button.keys()
-                    # i = i[0]
-                    # return i
-                print("[INFO] the bot decided to not buy houses")
+                # Prioritize cities that are not fully built
+                available_cities = [city for city in me.completed_sets if city not in self.completely_filled_cities]
+                if available_cities:
+                    chosen_city = random.choice(available_cities)
+                    print(f"[INFO] the bot chose to build on city: {chosen_city}")
+                    return request.valid_responses.index(chosen_city)
+
+                # If all completed sets are fully built, return
+                print("[INFO] all completed sets are fully built, returning")
                 return request.valid_responses.index('return')
 
 
@@ -113,6 +109,8 @@ class Bot:
                 print("[INFO] everything here is fully build")
                 self.completely_filled_cities.append(city)
                 return request.valid_responses.index('finish')
+            case 'offer trade accept':
+                return 0 # allways accept any trade offers
             case _:
                 print("[WARNING] bot encountered unknown action request", request.action_type)
         # Logic to choose an action based on the current state

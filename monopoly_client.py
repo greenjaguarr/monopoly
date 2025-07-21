@@ -83,6 +83,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                 await send_queue.put({'type': 'disconnect'})
                 await asyncio.sleep(0.1)
                 shutdown_event.set()
+                break
             if buttons:
                 # button_clicked = None
                 # if frame%10 == 0:

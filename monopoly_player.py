@@ -36,10 +36,10 @@ class Player: # This is not for online play
 
     def pay(self, amount:int):
         if amount > self.money:
-            print(f"Player {self.name} is about to go belly up")
+            print(f"[GAME] Player {self.name} is about to go belly up")
             self.has_lost = True
         self.money-=amount
-        print(f"Player {self.name} payed {amount} and is now left with {self.money}")
+        print(f"[GAME] Player {self.name} paid {amount} and is now left with {self.money}")
 
     def receive(self, amount:int):
         self.money+=amount
