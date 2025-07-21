@@ -32,6 +32,7 @@ async def draw_based_on_state(screen, font, state):
         finished = state.get('finished', None)
         currently_playing = state.get('currently playing', None)
         throw = state.get('throw', None)
+        winner = state.get('winner')
     if not (BOARD is None):
         frontend.draw_board(screen, BOARD, font)
         if players:
@@ -39,7 +40,7 @@ async def draw_based_on_state(screen, font, state):
         if throw and currently_playing:
             frontend.draw_throw(screen, throw, font, currently_playing)
     if finished:
-        frontend.draw_game_finished(screen, font, currently_playing)
+        frontend.draw_game_finished(screen, font, winner)
         print("[INFO] detected message that game is finished; func: draw_based_on_state")
     return finished
 
@@ -239,6 +240,7 @@ async def read_messages(websocket):
                         most_recent_throw = game_serialised.get('throw',None)
                         currently_playing:str = game_serialised.get('currently playing', None) # name of the currently playing player
                         finished:bool = game_serialised.get('finished', None)
+                        winner:Optional[str] = game_serialised.get('winner', None)
                         if finished:
                             print("[INFO] detected message that game is finished; func: read_messages")
 
