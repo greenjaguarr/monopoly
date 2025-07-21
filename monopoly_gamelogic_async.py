@@ -17,7 +17,7 @@ from monopoly_player_actions import PlayerActionRequest
 
 
 class GameLogic_async:
-    number_of_players_to_start = 3 # TODO make this not hard-coded
+    number_of_players_to_start = 2 # TODO make this not hard-coded
     def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
         self.clients:Dict[str:Connection] = {}
@@ -275,13 +275,14 @@ class GameLogic_async:
         }
 
         while True:
+            print("[INFO] current state of trade: ", trade)
             # Prepare display info for the menu
             extra_info = {
                 'your_money': initiator.money,
                 'your_properties': [p.name for p in initiator.properties],
                 'target_money': target.money,
                 'target_properties': [p.name for p in target.properties],
-                'trade': trade
+                # 'trade': trade
             }
             action = PlayerActionRequest('offer trade build', extra_display_info=extra_info)
             choice = await action.take_player_input(self)
@@ -385,6 +386,7 @@ class GameLogic_async:
         """
         Presents the trade to the target player and asks for accept/reject.
         """
+        print("[GAME FLOW] info: the target is being presented with the trade")
         initiator = self.clients[who_initiate_uuid]
         target = self.clients[who_target_uuid]
 
@@ -464,7 +466,9 @@ class GameLogic_async:
                     finished = True
                 case _:
                     raise RuntimeError(f"Unreachable, I got choice {choice}, but I was expecting either cancel or {names}")
-
+        # The trade was executed succesfully, so we return to the before throw menu
+        # dont forget te update the clients!
+        await self.broadcast_gamestate()
         
 
 

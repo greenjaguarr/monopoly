@@ -1,6 +1,7 @@
 import pygame
 from monopoly_gamelogic_async import Connection, GameLogic_async
 from typing import List, Optional
+from monopoly_player_actions import PlayerActionRequest
 
 # from monopoly_player_actions import actionType
 
@@ -276,7 +277,7 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
         text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
         text_properties.draw(screen)
 
-def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface, addition_info = None)->List[Button]:
+def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface, addition_info = None, request:Optional[PlayerActionRequest] = None)->List[Button]:
     match action_type_requested:
         case 'before throw menu':
             # print("[DEBUG] Drawing buttons for menu: before throw")
@@ -355,7 +356,160 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             text_city_desired = Text_plate(RED, 435, 210, f'City desired: {addition_info.get("city_desired", "Unknown")}', LIGHTGREY, font)
             text_city_desired.draw(screen)
             return buttons
+        
+        case "offer trade menu":
+            text = Text_plate(RED, 400, 500, 'Pick an option', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request:
+                if request.valid_responses:
+                    for i,response in enumerate(request.valid_responses):
+                        button = Button(300 + 120*i, 600, 100, 100, response, font, BLUE, CYAN, RED)
+                        button.draw(screen)
+                        buttons.append(button)
+                    return buttons
+                else:
+                    print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires passing parameter request")
+                pass
 
+        case "offer trade build":
+            text = Text_plate(RED, 400, 500, 'Pick an option', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request:
+                if request.valid_responses:
+                    for i,response in enumerate(request.valid_responses):
+                        button = Button(220 + 120*(i%5), 500 + 120 * (i//5), 100, 100, response, font, BLUE, CYAN, RED)
+                        button.draw(screen)
+                        buttons.append(button)
+                    return buttons
+                else:
+                    print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires passing parameter request")
+                pass
+        case 'offer trade accept':
+            addition_info = request.extra_display_info
+            text = Text_plate(RED, 400, 300, f'Do you want to accept the trade offered by {addition_info.get('from',None)}', LIGHTGREY, font)
+            text.draw(screen)
+            yes_button = Button(420, 600, 100, 100, 'yes', font, BLUE, CYAN, RED)
+            yes_button.draw(screen)
+            no_button = Button(540, 600, 100, 100, 'no', font, BLUE, CYAN, RED)
+            no_button.draw(screen)
+            # draw trade summary
+            # Draw trade summary
+            give_money = addition_info.get("get_money", 0)              # This looks weird, but it is reversed for the target player
+            get_money = addition_info.get("give_money", 0)              #
+            give_properties = addition_info.get("get_properties", [])   #
+            get_properties = addition_info.get("give_properties", [])   #
+
+            text_get_money = Text_plate(RED, 400, 400, f'You receive: €{get_money}', LIGHTGREY, font)
+            text_get_money.draw(screen)
+            text_give_money = Text_plate(RED, 400, 440, f'You give: €{give_money}', LIGHTGREY, font)
+            text_give_money.draw(screen)
+            text_get_properties = Text_plate(RED, 400, 480, f'You receive properties: {", ".join(get_properties) if get_properties else "None"}', LIGHTGREY, font)
+            text_get_properties.draw(screen)
+            text_give_properties = Text_plate(RED, 400, 520, f'You give properties: {", ".join(give_properties) if give_properties else "None"}', LIGHTGREY, font)
+            text_give_properties.draw(screen)
+            return yes_button, no_button
+        case "offer trade get property select":
+                # 'your_money': initiator.money,
+                # 'your_properties': [p.name for p in initiator.properties],
+                # 'target_money': target.money,
+                # 'target_properties': [p.name for p in target.properties],
+            your_properties = request.extra_display_info.get('your_properties', None)
+            target_properties = request.extra_display_info.get('target_properties', None)
+            # Show info about your and target's properties
+            text_your_props = Text_plate(RED, 400, 410, f'Your properties: {", ".join(your_properties) if your_properties else "None"}', LIGHTGREY, font)
+            text_your_props.draw(screen)
+            text_target_props = Text_plate(RED, 400, 440, f"Other player's properties: {', '.join(target_properties) if target_properties else 'None'}", LIGHTGREY, font)
+            text_target_props.draw(screen)
+            text = Text_plate(RED, 400, 380, 'Select a property to receive:', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request and request.valid_responses:
+                for i, response in enumerate(request.valid_responses):
+                    button = Button(350 + 120*(i%4), 490 + 80 * (i//4), 100, 60, response, font, BLUE, CYAN, RED)
+                    button.draw(screen)
+                    buttons.append(button)
+                return buttons
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+                return []
+        case "offer trade give property select":
+                # 'your_money': initiator.money,
+                # 'your_properties': [p.name for p in initiator.properties],
+                # 'target_money': target.money,
+                # 'target_properties': [p.name for p in target.properties],
+            your_properties = request.extra_display_info.get('your_properties', None)
+            target_properties = request.extra_display_info.get('target_properties', None)
+            # Show info about your and target's properties
+            text_your_props = Text_plate(RED, 400, 410, f'Your properties: {", ".join(your_properties) if your_properties else "None"}', LIGHTGREY, font)
+            text_your_props.draw(screen)
+            text_target_props = Text_plate(RED, 400, 440, f"Other player's properties: {', '.join(target_properties) if target_properties else 'None'}", LIGHTGREY, font)
+            text_target_props.draw(screen)
+            text = Text_plate(RED, 400, 380, 'Select a property to offer:', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request and request.valid_responses:
+                for i, response in enumerate(request.valid_responses):
+                    button = Button(350 + 120*(i%4), 490 + 80 * (i//4), 100, 60, response, font, BLUE, CYAN, RED)
+                    button.draw(screen)
+                    buttons.append(button)
+                return buttons
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+                return []
+        case "offer trade remove give property":
+                # 'your_money': initiator.money,
+                # 'your_properties': [p.name for p in initiator.properties],
+                # 'target_money': target.money,
+                # 'target_properties': [p.name for p in target.properties],
+            your_properties = request.extra_display_info.get('your_properties', None)
+            target_properties = request.extra_display_info.get('target_properties', None)
+            # Show info about your and target's properties
+            text_your_props = Text_plate(RED, 400, 410, f'Your properties: {", ".join(your_properties) if your_properties else "None"}', LIGHTGREY, font)
+            text_your_props.draw(screen)
+            text_target_props = Text_plate(RED, 400, 440, f"Other player's properties: {', '.join(target_properties) if target_properties else 'None'}", LIGHTGREY, font)
+            text_target_props.draw(screen)
+            text = Text_plate(RED, 400, 380, 'Select a property to remove the give:', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request and request.valid_responses:
+                for i, response in enumerate(request.valid_responses):
+                    button = Button(350 + 120*(i%4), 490 + 80 * (i//4), 100, 60, response, font, BLUE, CYAN, RED)
+                    button.draw(screen)
+                    buttons.append(button)
+                return buttons
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+                return []
+        case "offer trade remove get property":
+                # 'your_money': initiator.money,
+                # 'your_properties': [p.name for p in initiator.properties],
+                # 'target_money': target.money,
+                # 'target_properties': [p.name for p in target.properties],
+            your_properties = request.extra_display_info.get('your_properties', None)
+            target_properties = request.extra_display_info.get('target_properties', None)
+            # Show info about your and target's properties
+            text_your_props = Text_plate(RED, 400, 410, f'Your properties: {", ".join(your_properties) if your_properties else "None"}', LIGHTGREY, font)
+            text_your_props.draw(screen)
+            text_target_props = Text_plate(RED, 400, 440, f"Other player's properties: {', '.join(target_properties) if target_properties else 'None'}", LIGHTGREY, font)
+            text_target_props.draw(screen)
+            text = Text_plate(RED, 400, 380, 'Select a property to remove the give:', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            if request and request.valid_responses:
+                for i, response in enumerate(request.valid_responses):
+                    button = Button(350 + 120*(i%4), 490 + 80 * (i//4), 100, 60, response, font, BLUE, CYAN, RED)
+                    button.draw(screen)
+                    buttons.append(button)
+                return buttons
+            else:
+                print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
+                return []
         case _:
             print("Unknown action type", action_type_requested)
             raise RuntimeError("action type that is requested is not recognised")

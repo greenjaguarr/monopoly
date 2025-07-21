@@ -113,6 +113,8 @@ class Bot:
                 print("[INFO] everything here is fully build")
                 self.completely_filled_cities.append(city)
                 return request.valid_responses.index('finish')
+            case _:
+                print("[WARNING] bot encountered unknown action request", request.action_type)
         # Logic to choose an action based on the current state
         # This could involve checking the player's position, money, properties, etc.
         # return action_index

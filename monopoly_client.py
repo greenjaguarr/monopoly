@@ -94,7 +94,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                             print(f"[DEBUG] A button is clicked: {button}")
                             # button_clicked = button
                             match shared_action_request.action_type:
-                                case'before throw menu':
+                                case "offer trade remove give property" | "offer trade remove get property" | 'before throw menu' | 'offer trade menu' | 'offer trade build' | 'offer trade accept' | "offer trade get property select" | "offer trade give property select":
                                     choice = shared_action_request.valid_responses[i]
                                     print(f"[DEBUG] choice is {choice}")
                                     action_reply = {'type': 'action',
@@ -124,6 +124,8 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
+                                case _:
+                                    print("[WARNING] unknown action type", shared_action_request.action_type)
                             await asyncio.sleep(0.1)
                             break
         async with action_request_lock:
@@ -161,13 +163,15 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                             shared_action_request.action_type,
                             font,
                             screen,
-                            shared_action_request.extra_display_info
+                            shared_action_request.extra_display_info,
+                            request = shared_action_request
                         )
                     else:
                         buttons = frontend.draw_action_request(
                             shared_action_request.action_type,
                             font,
-                            screen
+                            screen,
+                            request = shared_action_request
                         )
                 else:
                     print('huh')

@@ -24,6 +24,7 @@ class Connection(Player):
     async def wait_for_client_input(self) -> dict:
         while True:
             try:
+                print("[DEBUG] waiting for input from player", self)
                 await asyncio.wait_for(self.input_event.wait(), timeout=5)
             except asyncio.TimeoutError:
                 if self.soft_disconnected:

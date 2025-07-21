@@ -13,13 +13,12 @@ class PlayerActionBase:
     valid_actions = {}
     valid_action_replys = {}
 
-    def __init__(self, valid_responses:Optional[List[str]] = None):
+    def __init__(self, name, valid_responses:Optional[List[str]] = None):
         self.__add_action('before throw menu', ['throw', 'buy/sell house', 'mortgage', 'request trade'])
         self.__add_action('want to buy property', ['yes', 'no'])
         self.__add_action("buy sell houses city menu",  ['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam', 'return'])
         self.__add_action('buy sell houses amount 2', ['increase 1','increase 2', 'decrease 1', 'decrease 2', 'back','finish'])
         self.__add_action('buy sell houses amount 3', ['increase 1','increase 2','increase 3', 'decrease 1', 'decrease 2', 'decrease 3', 'back', 'finish'])
-
 
 
         # self.__add_action('confirm trade proposal', ['confirm', 'cancel', 'edit'])
@@ -28,12 +27,13 @@ class PlayerActionBase:
                           ['add give money', 'add get money', 'add give property', 'add get property', 'remove give property', 'remove get property','reset','confirm', 'cancel'])
 
         if valid_responses:
-            self.__add_action('offer trade give money amount', ['__OPEN__'])
+            self.__add_action(name, valid_responses)
+            # self.__add_action('offer trade give money amount', ['__OPEN__'])
             # self.__add_action('select request assets', valid_responses)  # dynamically set
             # self.__add_action('select trade partner', valid_responses)  # dynamically set
             # self.__add_action('select offer assets', valid_responses)
             # self.__add_action('counter offer menu', valid_responses)  # dynamically set
-            self.__add_action('offer trade menu', valid_responses)
+            # self.__add_action('offer trade menu', valid_responses)
         # print('[DEBUG]', self.valid_actions)
         # print('[DEBUG]', self.valid_action_replys)
 
@@ -62,14 +62,17 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
         name: str,
         valid_responses: Optional[List[str]] = None,
         extra_display_info: Optional[dict] = None,
-        validate_response: Optional[callable] = None
+        validate_response: Optional[callable] = None,
+        target_player: Optional[Connection] = None
     ):
-        super().__init__(valid_responses)
+        super().__init__(name, valid_responses)
         self.action_type = name
         self.reply_type = f"{name} reply"
         self.choice = None
         self.extra_display_info = extra_display_info
         self.validate_request = validate_response
+ 
+        self.target = target_player
 
         # Try to get valid_responses from lookup if not provided
         if valid_responses is not None:
@@ -100,7 +103,7 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
         data = {
             'type': 'action request',
             'action type': self.action_type,
-            'additional information': self.extra_display_info
+            'extra display info': self.extra_display_info
         }
         if self.valid_responses is not None:
             data['valid responses'] = self.valid_responses
@@ -118,9 +121,11 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
             return False
         return all(isinstance(item, str) for item in valid_responses)
 
-    async def take_player_input(self, game, extra_display_info: Optional[dict] = None, target_client: Optional[Connection] = None) -> str:
-        if not target_client:
+    async def take_player_input(self, game, extra_display_info: Optional[dict] = None) -> str:
+        if not self.target:
             target_client = game.currently_playing_client
+        else:
+            target_client = self.target
         game.waiting_on_client = target_client
         game.waiting_for_actionType = self.reply_type
         while True:
@@ -130,7 +135,7 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
                 print(f"[DEBUG] extra display info: {extra_display_info}")
                 content.update({'extra display info': extra_display_info})
 
-            msg = Message(game.waiting_on_client, content)
+            msg = Message(target_client, content)
             await game.send_queue.put(msg.msg)
             try:
                 player_action = await target_client.wait_for_client_input()
@@ -157,21 +162,21 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
 class PlayerActionReply(PlayerActionBase):
     def __init__(self, action_reply:dict ):
         print(f'[DEBUG] attempting to instantiate PlayerActionReply using dictionairy {action_reply}')
-        super().__init__()
+        # super().__init__()
         self.action_type_reply: str = action_reply.get('action type',None)
         self.choice:str = action_reply.get('choice', None)
         if not self.is_valid_action_type_reply(self.action_type_reply):
             raise ValueError(f"Invalid action type {self.action_type_reply}")
         self.valid_responses = self.get_valid_responses_reply(self.action_type_reply)
         print(f"[DEBUG] valid responses are {self.valid_responses}")
-        self.__validate_reply()
+        # self.__validate_reply()
 
-    def __validate_reply(self) -> bool:
-        if not isinstance(self.choice, str):
-            print(f'choice {self.choice} is not a string')
-        if self.choice not in self.valid_responses:
-            raise ValueError("action_reply['choice'] is not a valid response")
-        return True
+    # def __validate_reply(self) -> bool: # This one is for serverside?
+    #     if not isinstance(self.choice, str):
+    #         print(f'choice {self.choice} is not a string')
+    #     if self.choice not in self.valid_responses:
+    #         raise ValueError("action_reply['choice'] is not a valid response")
+    #     return True
 
     def serialise_reply(self) -> dict:
         return {
