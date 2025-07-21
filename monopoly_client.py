@@ -72,9 +72,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
         # if frame%10 == 0:
         # print("Making new frame")
         await asyncio.sleep(0)
-        clock.tick(frontend.FPS * 2)
-        await asyncio.sleep(0)
-        clock.tick(frontend.FPS * 2)
+        clock.tick(frontend.FPS)
         # game logic ( i mean the input side()
         # if frame%10 == 0:
         # print("[DEBUG] checking for events")
@@ -126,7 +124,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
-                            await asyncio.sleep(0.3)
+                            await asyncio.sleep(0.1)
                             break
         async with action_request_lock:
             async with STATE_LOCK:

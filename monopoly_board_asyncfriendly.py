@@ -152,14 +152,26 @@ class Street(Property):
 
 
     def serialise(self)->dict:
-        return {
-            'position': self.position,
-            'name': self.name,
-            'price': self.price,
-            'city': self.city,
-            'house count': self.house_count,
-            'space type': self.space_type
-        }
+        if self.owner:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'city': self.city,
+                'house count': self.house_count,
+                'space type': self.space_type,
+                'owner': self.owner.name
+            }
+        else:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'city': self.city,
+                'house count': self.house_count,
+                'space type': self.space_type,
+                'owner': 'not purchased yet'
+            }
 
     @property
     def buildable(self)->bool:
@@ -211,12 +223,22 @@ class Utility(Property):
         raise RuntimeError("Not implemented yet")
     
     def serialise(self)->dict:
-        return {
-            'position': self.position,
-            'name': self.name,
-            'price': self.price,
-            'space type': self.space_type
-        }
+        if self.owner:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'space type': self.space_type,
+                'owner': self.owner.name
+            }
+        else:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'space type': self.space_type,
+                'owner': 'not purchased yet'
+            }
 
     
     def calculate_rent(self, diceroll:Optional[int] = None)->int: # this function assumes no mortgages
@@ -243,12 +265,22 @@ class Station(Property):
         return "station"
     
     def serialise(self)->dict:
-        return {
-            'position': self.position,
-            'name': self.name,
-            'price': self.price,
-            'space type': self.space_type
-        }
+        if self.owner:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'space type': self.space_type,
+                'owner': self.owner.name
+            }
+        else:
+            return {
+                'position': self.position,
+                'name': self.name,
+                'price': self.price,
+                'space type': self.space_type,
+                'owner': 'not purchased yet'
+            }
 
     def mortgage(self,client:Connection):
         raise RuntimeError("Not implemented yet")

@@ -44,7 +44,8 @@ class Board_representation:
         # print("Making board represenstation, self.spaces")
         # print(self.spaces)
     def __repr__(self):
-        return f"Board_representation(spaces={self.spaces})"
+        spaces_str = "\n".join(str(space) for space in self.spaces)
+        return f"Board_representation(spaces=[\n{spaces_str}\n])"
         
 
 

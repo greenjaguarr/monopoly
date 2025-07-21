@@ -353,6 +353,7 @@ class GameLogic_async:
         for uuid, client in self.clients.items():
             if not client.has_lost:
                 not_finished_count+=1
+            else:
                 for p in client.properties:
                     p.owner = None
         if not_finished_count<2:
