@@ -281,13 +281,20 @@ async def read_messages(websocket):
                     async with action_request_lock:
                         print("[DEBUG] got action request")
                         try:
-                            action_requested = PlayerActionRequest(payload.get('action type', None))
-                            action_requested.valid_responses = payload.get('valid responses', [])
-                            print("[DEBUG] action requested:", action_requested)
+                            name = payload.get('action type')
                             additional_info = payload.get('extra display info', None)
-                            if additional_info:
-                                print(f"[DEBUG] additional info: {additional_info}")
-                                action_requested.extra_display_info = additional_info
+                            validation = payload.get('validation', None)
+                            valid_responses = payload.get('valid responses', None)
+
+                            # make the action request object
+                            if validation:
+                                def whatever(): pass
+                                action_requested = PlayerActionRequest(name, extra_display_info=additional_info, validate_response=whatever)
+                            else:
+                                action_requested = PlayerActionRequest(name, extra_display_info=additional_info, valid_responses=valid_responses)
+
+                            print("[DEBUG] action requested:", action_requested)
+
                         except ValueError:
                             # there is an issue with instantiating the action request, most likely the message is invalid
                             continue # to the next message

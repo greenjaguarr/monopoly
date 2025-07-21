@@ -97,12 +97,16 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
         return f"PlayerActionRequest(name={self.action_type!r}, valid_responses={self.valid_responses!r})"
 
     def serialise_request(self) -> dict:
-        return {
+        data = {
             'type': 'action request',
             'action type': self.action_type,
-            'valid responses': self.valid_responses,
             'additional information': self.extra_display_info
         }
+        if self.valid_responses is not None:
+            data['valid responses'] = self.valid_responses
+        if callable(self.validate_request):
+            data['validation'] = 'callable'
+        return data
 
     def validate_request(self, action_request: dict) -> bool:
         if not isinstance(action_request, dict):
