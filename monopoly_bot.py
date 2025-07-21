@@ -9,6 +9,7 @@ from monopoly_connection import Connection
 class Bot:
     def __init__(self):
         print("[INFO] bot instantialted")
+        self.completely_filled_cities:List[str] = []
         pass
     
     
@@ -25,7 +26,9 @@ class Bot:
         # await asyncio.sleep(0.5)
         match request.action_type:
             case 'before throw menu':
-                if random.random() < 0.1:
+                if len(me.completed_sets) == 0: chance = 0.1
+                else: chance = 0.5
+                if random.random() < chance:
                     print("[INFO] bot decided to buy / sell houses")
                     return 1
                 else:
@@ -48,6 +51,8 @@ class Bot:
                 for city in me.completed_sets:
                     if random.random() > 0.5:
                         continue
+                    elif city in self.completely_filled_cities:
+                        print("[DEBUG] This city is full, so we dotn build on it")
                     else:
                         return request.valid_responses.index(city)
                     # correct_button = {i:b for i,b in enumerate(buttons) if city in b.text}
@@ -77,10 +82,11 @@ class Bot:
                     return request.valid_responses.index('increase 2')
                 # everything is fully built
                 print("[INFO] everything here is fully build")
-                return request.valid_responses.index('finished')
+                self.completely_filled_cities.append(city)
+                return request.valid_responses.index('finish')
                 
             case 'buy sell houses amount 3':
-                additional_info = request.additional_display_info
+                additional_info:dict = request.extra_display_info
                 city = additional_info['city']
                 house_cost = additional_info['house cost']
                 city_distribution = additional_info['city_distribution']
@@ -98,7 +104,8 @@ class Bot:
                     return request.valid_responses.index('increase 3')
                 # everything is fully built
                 print("[INFO] everything here is fully build")
-                return request.valid_responses.index('finished')
+                self.completely_filled_cities.append(city)
+                return request.valid_responses.index('finish')
         # Logic to choose an action based on the current state
         # This could involve checking the player's position, money, properties, etc.
         # return action_index

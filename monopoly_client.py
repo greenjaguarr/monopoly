@@ -59,6 +59,8 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
     await send_queue.put(msg)
 
     frame:int = 0
+    if 'bot' in sys.argv:
+        bot = Bot()
     running = True
     print("Starting event loop")
     while running:
@@ -130,7 +132,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
             async with STATE_LOCK:
                 if 'bot' in sys.argv and isinstance(shared_action_request, PlayerActionRequest) and buttons:
                     # Let the bot decide and send the action automatically
-                    bot = Bot()
+                    
                     # await asyncio.sleep(0.2)
                     action_index = bot.choose_action(shared_action_request, state, buttons)
                     if action_index is not None and 0 <= action_index < len(buttons):

@@ -1,10 +1,10 @@
 import websockets.connection
-from monopoly_board_asyncfriendly import BoardAsync, Cards, Street
+from monopoly_board_asyncfriendly import BoardAsync, Cards, Street, Property
 from monopoly_player import Player
 # from monopoly_player_actions import actionTypes
 import random
 from  itertools import cycle
-from typing import Optional, List, Any, TYPE_CHECKING
+from typing import Optional, List, Any, TYPE_CHECKING, Dict
 import asyncio
 import websockets
 import json
@@ -17,10 +17,10 @@ from monopoly_player_actions import PlayerActionRequest
 
 
 class GameLogic_async:
-    number_of_players_to_start = 2 # TODO make this not hard-coded
+    number_of_players_to_start = 4 # TODO make this not hard-coded
     def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
-        self.clients:dict[str:Connection] = {}
+        self.clients:Dict[str:Connection] = {}
         self.currently_playing_uuid:str = None
         self.currently_playing_client:Optional[Connection] = None
         self.finished = False
@@ -45,7 +45,8 @@ class GameLogic_async:
             'currently playing': None,
             'players': serialised_players,
             'throw': self.throw,
-            'board': serialised_board
+            'board': serialised_board,
+            'winner': self.winner
         }
         else:
             return {
@@ -97,6 +98,10 @@ class GameLogic_async:
             disconnected_uuids = [uuid for uuid, client in self.clients.items() if client.soft_disconnected]
             for uuid in disconnected_uuids:
                 print(f"[INFO] Removing disconnected client: {self.clients[uuid].name} ({uuid})")
+                for propertie in self.clients[uuid].properties:
+                    assert isinstance(propertie, Property)
+                    propertie.owner = None
+                    propertie.house_count = 0
                 self.clients.pop(uuid)
             # Rebuild the player iterator if needed
             if self.players_iterator is not None and self.clients:
@@ -350,7 +355,7 @@ class GameLogic_async:
             self.finished = True
             for client in self.clients.values():
                 if not client.has_lost:
-                    self.winner = client
+                    self.winner = client.name
                     print(f"[GAME FLOW] {client.name} has won the game")
                     break
 

@@ -78,6 +78,7 @@ class PlayerActionRequest(PlayerActionBase):
         game.waiting_on_client = game.currently_playing_client
         game.waiting_for_actionType = self.reply_type
         while True:
+            print('[INFO] sending message to client with request to reply, action:', self)
             content = self.serialise_request()
             if extra_display_info:
                 print(f"[DEBUG] extra display info: {extra_display_info}")

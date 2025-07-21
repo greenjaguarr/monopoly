@@ -64,6 +64,8 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
                 running = False
                 await game.broadcast_gamestate()
             await game.cleanup_disconnect()
+            if 'bot' in game.currently_playing_client.name:
+                game.currently_playing_client.pay(5)
             await asyncio.sleep(0)
     except Exception as e:
         print("[ERROR] an exception occured in the game loop, aborting...")
@@ -84,7 +86,10 @@ async def sender(send_queue:asyncio.Queue,game:GameLogic_async): # TODO add time
         if shutdown_event.is_set():
             break  # Stop de lus als het shutdown-event is ingesteld
         try:
-            message:dict = await send_queue.get()
+            try:
+                message: dict = await asyncio.wait_for(send_queue.get(), timeout=5)
+            except asyncio.TimeoutError:
+                continue  # Skip this iteration if no message is available within 5 seconds
             if isinstance(message, Message):
                 message = message.msg
         except Exception:
