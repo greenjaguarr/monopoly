@@ -250,6 +250,7 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
     text_name.draw(screen)
     text_money = Text_plate(RED, 200, y_start + 30, f'Money: {player.money}', LIGHTGREY, font)
     text_money.draw(screen)
+    if player.has_lost: return # dont draw the rest
     this_players_properties_positions = sorted(player.properties)
     # print(f"[DEBUG] frontend: drawing player properties: {this_players_properties_positions}") # This value is correct, so the code works up until at least here
     if this_players_properties_positions:

@@ -27,9 +27,9 @@ class GameLogic_async:
         self.winner = None
         self.gameReadyToStart = asyncio.Event()
         self.send_queue = send_queue # This queue should only be added to by this class. The queue should only contain type "Message"
-        self.waiting_on_client:Optional[Connection] = None
         self.throw:int = 0
         self.players_iterator = None
+        self.waiting_on_client:Optional[Connection] = None
         self.waiting_for_actionType:Optional[str] = None
 
 
@@ -37,6 +37,7 @@ class GameLogic_async:
     def serialise(self)->dict:
         serialised_players:dict = {client_uuid:client.serialise() for client_uuid, client in self.clients.items()}
         serialised_board = self.board.serialise()
+        waiting_for_client = self.waiting_on_client if self.waiting_on_client else None
         if self.currently_playing_client is None:
             return {
             # 'turn': self.turn,
@@ -46,7 +47,9 @@ class GameLogic_async:
             'players': serialised_players,
             'throw': self.throw,
             'board': serialised_board,
-            'winner': self.winner
+            'winner': self.winner,
+            'waiting for player': waiting_for_client,
+            'waiting for action type': self.waiting_for_actionType
         }
         else:
             return {
@@ -56,7 +59,9 @@ class GameLogic_async:
                 'currently playing': self.currently_playing_client.name,
                 'players': serialised_players,
                 'throw': self.throw,
-                'board': serialised_board
+                'board': serialised_board,
+                'waiting for player': waiting_for_client,
+                'waiting for action type': self.waiting_for_actionType
             }
     
     async def broadcast(self, msg_content:dict):
@@ -256,7 +261,8 @@ class GameLogic_async:
         pass
     async def __offer_trade(self):
         print(f"[GAME FLOW] {self.currently_playing_client.name} is entering the trade offer menu")
-        pass
+        return
+
         # raise NotImplementedError("[ERROR] offering trades is not implemented")
 
 
@@ -287,12 +293,12 @@ class GameLogic_async:
 
     async def do_1_turn_1_player(self):
         self.throw = 0
-        print("Start of next turn")
+        print("[GAME FLOW] Start of next turn")
         self.__next_turn()
         assert isinstance(self.currently_playing_client, Connection)
         await self.broadcast_gamestate()
-        print(f"The current player is {self.currently_playing_client}. They are standing on space {self.board.spaces[self.currently_playing_client.position]}")
-        print(f"The current player has {self.currently_playing_client.money} money")
+        print(f"[GAME FLOW] The current player is {self.currently_playing_client}. They are standing on space {self.board.spaces[self.currently_playing_client.position]}")
+        print(f"[GAME FLOW] The current player has {self.currently_playing_client.money} money")
         # check if they are dead
         if self.currently_playing_client.money<0:
             print("This player is a broke boi so they cant play; NEXT")
@@ -366,7 +372,7 @@ class GameLogic_async:
 
     def __throw_dice(self)->int:
         throw = random.randint(1,6) + random.randint(1,6)
-        print(f"{throw} thrown")
+        print(f"[GAME FLOW] {throw} thrown by player: {self.currently_playing_client.name}")
         return throw
 
 

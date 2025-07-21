@@ -100,8 +100,7 @@ async def sender(send_queue:asyncio.Queue,game:GameLogic_async): # TODO add time
             target_uuid:Optional[str] = message.get("uuid", None)
             if target_uuid is None:
                 raise Exception("I messed up while making a message")
-            # print(f'[MESSAGE] to {game.clients[target_uuid].name} : content: {message}')
-            print(f'[MESSAGE] to {game.clients[target_uuid].name}')
+            print(f"[MESSAGE] to {game.clients[target_uuid].name}")
             target_client_ws = game.clients[target_uuid].ws
             await target_client_ws.send(json.dumps(message))
             send_queue.task_done()

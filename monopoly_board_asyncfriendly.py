@@ -81,10 +81,10 @@ class Property(Space, ABC):
             client.pay(self.price)
             self.owner = client
             client.properties.append(self)
-            print(f"{client.name} bought {self.name} for ${self.price}")
+            print(f"[GAME FLOW] {client.name} bought {self.name} for ${self.price}")
             client.update_completed_sets()
         else:
-            print(f"{self.name} is not available for purchase for you.")
+            print(f"[GAME FLOW] {self.name} is not available for purchase for you.")
 
 
     @property
@@ -101,7 +101,7 @@ class Property(Space, ABC):
         pass
 
     async def offer_purchase(self,client:Connection): # this funciton requires client input. fOllow the exaple set by GameLogic_async.__before_throw_menu
-        print(f"[GAME CONTROL FLOW INFO] {client.name} can buy {self.name} for ${self.price}.")
+        print(f"[GAME FLOW] {client.name} can buy {self.name} for ${self.price}.")
 
         action_want_to_buy_property = PlayerActionRequest('want to buy property')
         try:
@@ -121,17 +121,17 @@ class Property(Space, ABC):
         if self.owner is None:
             await self.offer_purchase(player)
         elif self.owner == player:
-            print(f"Player {player.name} landed of their own space")
+            print(f"[GAME FLOW] Player {player.name} landed of their own space")
         elif self.owner != player:
             if self.morgaged:
-                print(f"Player {player.name} landed on {self.owner}'s property, but it is morgaged")
+                print(f"[GAME FLOW] Player {player.name} landed on {self.owner}'s property, but it is morgaged")
             else: #dokken vriend
                 #update rent
                 diceroll:int = player.most_recent_diceroll
                 rent = self.calculate_rent(diceroll)
                 player.pay(rent)
                 self.owner.receive(rent)
-                print(f"{player.name} pays ${rent} to {self.owner.name} for landing on {self.name}")
+                print(f"[GAME FLOW] {player.name} pays ${rent} to {self.owner.name} for landing on {self.name}")
 
     # implemetn mortgaging?
     @abstractmethod
@@ -303,7 +303,7 @@ class CardSpace(Space, ABC):            # THIS NEEDS TO BE COMPLETELY REFACTORED
     
     async def on_land(self, client:Connection): # TODO make this actually do something
         card:str = self.deck.draw()
-        print(f"Player {client.name} drew a card that says: {card}")
+        print(f"[GAME FLOW] Player {client.name} drew a card that says: {card}")
         
     @property
     def purchasable(self)->bool:
@@ -340,6 +340,7 @@ class Tax(Space):
         self.amount = amount
 
     async def on_land(self, client:Connection):
+        print(f"[GAME FLOW] Player {client.name} paid {self.amount} in tax")
         client.pay(self.amount)
     
     @property
@@ -362,6 +363,7 @@ class GO(Space):
         super().__init__(position=0, name="GO", game = game)
 
     async def on_land(self,client:Connection):
+        print(f"[GAME FLOW] Player {client.name} landed on GO")
         return
 
     @property
@@ -385,6 +387,7 @@ class GoToJail(Space):
     def __init__(self, game:GameLogic_async):
         super().__init__(position = 30, name = "Go to jail", game=game)
     async def on_land(self, client:Connection):
+        print(f"[GAME FLOW] Player {client.name} landed on GO TO JAIL")
         client.position = self.JailPosition
         client.jailtime = 3
 
@@ -408,7 +411,7 @@ class FreeParking(Space):
         super().__init__(position, name, game)
     
     async def on_land(self, client:Connection):
-        print(f"Player {client.name} landed on a free space and does nothing")
+        print(f"[GAME FLOW] Player {client.name} landed on a free space and does nothing")
     @property
     def space_type(self)->str:
         return "free parking"

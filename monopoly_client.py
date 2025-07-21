@@ -241,6 +241,8 @@ async def read_messages(websocket):
                         currently_playing:str = game_serialised.get('currently playing', None) # name of the currently playing player
                         finished:bool = game_serialised.get('finished', None)
                         winner:Optional[str] = game_serialised.get('winner', None)
+                        waiting_for_client = game_serialised.get('waiting for player', None)
+                        waiting_for_actiontype = game_serialised.get('waiting for action type',None)
                         if finished:
                             print("[INFO] detected message that game is finished; func: read_messages")
 

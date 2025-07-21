@@ -52,6 +52,7 @@ class Bot:
                         continue
                     elif city in self.completely_filled_cities:
                         print("[DEBUG] This city is full, so we dotn build on it")
+                        pass
                     else:
                         return request.valid_responses.index(city)
                     # correct_button = {i:b for i,b in enumerate(buttons) if city in b.text}
