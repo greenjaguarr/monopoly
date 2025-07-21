@@ -259,8 +259,20 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
         properties_str = ", ".join(properties_names)
     else:
         properties_str = "None"
-    text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
-    text_properties.draw(screen)
+
+    # Split properties_str into two lines if more than 10 properties
+    if len(this_players_properties_positions) > 10:
+        properties_names_1 = properties_names[:10]
+        properties_names_2 = properties_names[10:]
+        properties_str_1 = ", ".join(properties_names_1)
+        properties_str_2 = ", ".join(properties_names_2)
+        text_properties_1 = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str_1}', LIGHTGREY, font)
+        text_properties_1.draw(screen)
+        text_properties_2 = Text_plate(RED, 200, y_start + 90, f'{properties_str_2}', LIGHTGREY, font)
+        text_properties_2.draw(screen)
+    else:
+        text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
+        text_properties.draw(screen)
 
 def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface, addition_info = None)->List[Button]:
     match action_type_requested:

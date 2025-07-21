@@ -126,7 +126,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
-                            await asyncio.sleep(0.5)
+                            await asyncio.sleep(0.3)
                             break
         async with action_request_lock:
             async with STATE_LOCK:

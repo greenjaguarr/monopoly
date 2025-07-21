@@ -17,7 +17,7 @@ from monopoly_player_actions import PlayerActionRequest
 
 
 class GameLogic_async:
-    number_of_players_to_start = 4 # TODO make this not hard-coded
+    number_of_players_to_start = 3 # TODO make this not hard-coded
     def __init__(self, send_queue: asyncio.Queue): # do a little bit here, just enough to get off the ground
         self.board = BoardAsync(self)
         self.clients:Dict[str:Connection] = {}
@@ -131,6 +131,8 @@ class GameLogic_async:
         # make an iterator
         # maybe make it so the order is based on something
         self.players_iterator = cycle(self.clients.keys())
+        for _ in range(random.randint(1,50)):
+            self.__next_turn()
 
    
     # Game logic and flow
@@ -351,6 +353,8 @@ class GameLogic_async:
         for uuid, client in self.clients.items():
             if not client.has_lost:
                 not_finished_count+=1
+                for p in client.properties:
+                    p.owner = None
         if not_finished_count<2:
             self.finished = True
             for client in self.clients.values():

@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 import uuid as Uuid
 from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
 import sys
+import random
 
 clients = set()
 

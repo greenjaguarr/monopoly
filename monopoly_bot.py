@@ -23,7 +23,6 @@ class Bot:
         if me is None:
             return -1
         print(f'[DEBUG] the bot is thinking about request: {request.action_type}')
-        # await asyncio.sleep(0.5)
         match request.action_type:
             case 'before throw menu':
                 if len(me.completed_sets) == 0: chance = 0.1
@@ -71,8 +70,11 @@ class Bot:
                 house_cost = additional_info['house cost']
                 city_distribution = additional_info['city_distribution']
                 city_desired = additional_info['city_desired']
+                total_house_build_desire  = sum([ desired - current for current, desired in zip(city_distribution, city_desired)])
                 if me.money - house_cost < 200:
                     print("[INFO] the bot didnt buy to save money")
+                if me.money - house_cost * (total_house_build_desire + 1) < 200:
+                    print("[INFO] the bot didnt buy  andy adiitional houses to save money")
                     return request.valid_responses.index('finish')
                 if not city_desired[0] == 5:
                     print("[INFO] the bot wanted to buy houses")
@@ -91,7 +93,11 @@ class Bot:
                 house_cost = additional_info['house cost']
                 city_distribution = additional_info['city_distribution']
                 city_desired = additional_info['city_desired']
+                total_house_build_desire  = sum([ desired - current for current, desired in zip(city_distribution, city_desired)])
                 if me.money - house_cost < 200:
+                    return request.valid_responses.index('finish')
+                if me.money - house_cost * (total_house_build_desire + 1) < 200:
+                    print("[INFO] the bot didnt buy  andy adiitional houses to save money")
                     return request.valid_responses.index('finish')
                 if not city_desired[0] == 5:
                     print("[INFO] the bot wanted to buy houses")
