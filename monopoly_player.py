@@ -29,7 +29,8 @@ class Player: # This is not for online play
             'money': self.money,
             'jailtime': self.jailtime,
             'has_lost': self.has_lost,
-            'properties': [propertie.position for propertie in self.properties]
+            'properties': [propertie.position for propertie in self.properties],
+            'completed sets': list(self.complete_sets)
         }
         
 

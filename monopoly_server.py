@@ -51,7 +51,7 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
         turn = 0
         running = True
         while running:
-            print("[INFO] New turn is starting; Broadcasting gamestate")
+            print("[INFO] New turn is starting; Broadcasting gamestate ------------------------------------------------------------------------------")
             # await game.broadcast_gamestate()
             try:
                 await game.do_1_turn_1_player()
@@ -62,6 +62,7 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
             game.check_finished()
             if game.finished:
                 running = False
+                await game.broadcast_gamestate()
             await game.cleanup_disconnect()
             await asyncio.sleep(0)
     except Exception as e:

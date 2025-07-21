@@ -96,6 +96,10 @@ class PlayerActionRequest(PlayerActionBase):
                 print("[DEBUG] received reply to player action request from player ", game.currently_playing_client.name)
             except ValueError:
                 raise RuntimeError("[ERROR ]Could not instantiate PlayerActionReply")
+            if reply.action_type_reply != self.reply_type:
+                print("[WARNING] received incorrect action type reply, rejecting...")
+                print(reply.action_type_reply, self.reply_type)
+                continue
             break
         ack_msg = Message(game.currently_playing_client, {'type': 'acknowledge correct action reply'})
         await game.send_queue.put(ack_msg.msg)
@@ -129,6 +133,8 @@ class PlayerActionReply(PlayerActionBase):
             'action': self.choice,
             'type': 'action reply'
         }
+    def __repr__(self):
+        return f"{self.action_type_reply}: {self.choice}"
 
 
 

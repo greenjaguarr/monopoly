@@ -8,21 +8,12 @@ from monopoly_board_asyncfriendly import BoardAsync
 import monopoly_frontend as frontend
 from monopoly_gamelogic_async import GameLogic_async
 from monopoly_player_actions import PlayerActionReply, PlayerActionRequest
-
-
-# You can use an asyncio.Lock to synchronize access to a shared PlayerActionRequest object.
-# Example setup:
+import sys
+if len(sys.argv) > 1 and sys.argv[1] == 'bot':
+    from monopoly_bot import Bot
 
 action_request_lock = asyncio.Lock()
 shared_action_request: Optional[PlayerActionRequest] = None
-
-# To update or read shared_action_request safely in coroutines:
-# async with action_request_lock:
-#     shared_action_request = PlayerActionRequest(...)
-#     # or read from shared_action_request
-
-# This ensures only one coroutine accesses/modifies the object at a time.
-# globals
 STATE_LOCK = asyncio.Lock()
 shutdown_event = asyncio.Event()
 start_pygame_event = asyncio.Event()
@@ -49,6 +40,7 @@ async def draw_based_on_state(screen, font, state):
             frontend.draw_throw(screen, throw, font, currently_playing)
     if finished:
         frontend.draw_game_finished(screen, font, currently_playing)
+        print("[INFO] detected message that game is finished; func: draw_based_on_state")
     return finished
 
 
@@ -73,6 +65,7 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
         if shutdown_event.is_set():
             running = False
             print('[DEBUG] pygmae loop is shutting down since it detected a shutdown event')
+            return
         # if frame%10 == 0:
         # print("Making new frame")
         await asyncio.sleep(0)
@@ -130,7 +123,30 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
+                            await asyncio.sleep(0.5)
                             break
+        async with action_request_lock:
+            async with STATE_LOCK:
+                if 'bot' in sys.argv and isinstance(shared_action_request, PlayerActionRequest) and buttons:
+                    # Let the bot decide and send the action automatically
+                    bot = Bot()
+                    # await asyncio.sleep(0.2)
+                    action_index = bot.choose_action(shared_action_request, state, buttons)
+                    if action_index is not None and 0 <= action_index < len(buttons):
+                        action_reply = {
+                            'type': 'action',
+                            'action type': shared_action_request.reply_type,
+                            'choice': shared_action_request.valid_responses[action_index]
+                        }
+                        reply = PlayerActionReply(action_reply)
+                        msg = reply.serialise_reply()
+                        print(f"[INFO] the bot got an action request {shared_action_request};   the bot replied {reply}")
+                        await send_queue.put(msg)
+                    else:
+                        print("[WARNING] the bot failed to execute a valid anallysys and producted a bogus response")
+                        print(action_index, shared_action_request.valid_responses)
+                    await asyncio.sleep(0.3) # i think this could kind of sovle desync stuff
+                
         # draw
         await asyncio.sleep(0)
         frontend.draw_board_background(screen)
@@ -192,16 +208,20 @@ async def read_messages(websocket):
         try:
             payload = json.loads(message)
             typpe = payload.get("type", None)
-            print(
-                f"[INFO] Receives message of type '{typpe}' from the server, message:: {payload}"
-            )
+            if not typpe in ['gamestate reply', 'gamestate update']:
+                print(f"[INFO] Receives message of type '{typpe}' from the server, message:: {payload}")
             if not typpe in EXPECTED_MESSAGES:
                 continue
 
             match typpe:
                 case "gamestate reply" | "gamestate update":
-                    print("[NEW GAMESTATE]", payload)
+                    # print("[NEW GAMESTATE]", payload)
+                    print("[DEBUG] received gamestate reply or update")
+                    if not payload.get("content", None):
+                        print("[ERROR] gamestate reply or update does not contain content")
+                        continue
                     async with STATE_LOCK:
+                        
                         # reset
                         state.update({'board': None})
                         state.update({'players': None})
@@ -219,6 +239,9 @@ async def read_messages(websocket):
                         most_recent_throw = game_serialised.get('throw',None)
                         currently_playing:str = game_serialised.get('currently playing', None) # name of the currently playing player
                         finished:bool = game_serialised.get('finished', None)
+                        if finished:
+                            print("[INFO] detected message that game is finished; func: read_messages")
+
 
                         board_representation = frontend.Board_representation(board)
                         players_representation = [
@@ -228,7 +251,8 @@ async def read_messages(websocket):
                                 player.get('money', None),
                                 player.get('jailtime', None),
                                 player.get('has lost', None),
-                                player.get('properties', None)
+                                player.get('properties', None),
+                                player.get('completed sets', [])
                             )
                             for player_uuid, player in players.items()
                         ]
@@ -238,24 +262,31 @@ async def read_messages(websocket):
                         state.update({'currently playing': currently_playing})
                         state.update({'finished': finished})
                         print("[DEBUG] Summary of received gamestate:")
-                        print("summary not implemented")
+                        # print("summary not implemented")
+                        # print("[DEBUG] Updated state with new gamestate")
+                        print(f"[INFO] Summary of received gamestate:")
+                        print(f"[INFO] Currently playing: {currently_playing}")
+                        print(f"[INFO] Most recent throw: {most_recent_throw}")
+                        print(f"[INFO] Players: {state.get('players', None)}")
+                        # print(f"[INFO] Board: {state.get('board', None)}")
+
                 case "game is starting":
                     print("[INFO] Game is starting!")
                 case "action request":
                     # global action_type_requested
-                    print("[DEBUG] got action request")
-                    try:
-                        action_requested = PlayerActionRequest(payload.get('action type', None))
-                        action_requested.valid_responses = payload.get('valid responses', [])
-                        print("[DEBUG] action requested:", action_requested)
-                        additional_info = payload.get('extra display info', None)
-                        if additional_info:
-                            print(f"[DEBUG] additional info: {additional_info}")
-                            action_requested.extra_display_info = additional_info
-                    except ValueError:
-                        # there is an issue with instantiating the action request, most likely the message is invalid
-                        continue # to the next message
                     async with action_request_lock:
+                        print("[DEBUG] got action request")
+                        try:
+                            action_requested = PlayerActionRequest(payload.get('action type', None))
+                            action_requested.valid_responses = payload.get('valid responses', [])
+                            print("[DEBUG] action requested:", action_requested)
+                            additional_info = payload.get('extra display info', None)
+                            if additional_info:
+                                print(f"[DEBUG] additional info: {additional_info}")
+                                action_requested.extra_display_info = additional_info
+                        except ValueError:
+                            # there is an issue with instantiating the action request, most likely the message is invalid
+                            continue # to the next message
                         shared_action_request = action_requested
                         print("[INFO] Action requested from server:", shared_action_request.action_type)
                         if shared_action_request is None:
@@ -298,6 +329,7 @@ async def send_messages(websocket, send_queue: asyncio.Event, my_uuid: str):
             message.update({"uuid": my_uuid})
 
             # await websocket.send(json.dumps(message)) #THIS IS WRONG, we need to send it to message.client
+            print(f"[INFO] sending message to server: {message}")
             await websocket.send(json.dumps(message))
             send_queue.task_done()
         except Exception as e:

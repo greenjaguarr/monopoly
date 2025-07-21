@@ -134,11 +134,11 @@ class GameLogic_async:
         print("[GAME FLOW] player is now in inner loop of buy sell houses")
                 # Handle Ons Dorp city
         city_locations = locations
-        city = [street for street in self.board.spaces if street.position in city_locations]
+        city:List[Street] = [street for street in self.board.spaces if street.position in city_locations]
         assert all([isinstance(street, Street) for street in city])
         print(f"[GAME FLOW] {self.currently_playing_client.name} selected Ons Dorp for buy/sell houses")
-        city_distribution = [street.house_count for street in city]
-        city_desired = [street.house_count for street in city]
+        city_distribution:List[int] = [street.house_count for street in city]
+        city_desired:List[int] = [street.house_count for street in city]
         action_houses_city = PlayerActionRequest(f'buy sell houses amount {len(city_locations)}')
 
         confirm_inner = False
@@ -146,7 +146,8 @@ class GameLogic_async:
             extra_info = {
                 'city': city[0].city,
                 'city_distribution': city_distribution,
-                'city_desired': city_desired
+                'city_desired': city_desired,
+                'house cost': city[0].HOUSE_COST
             }
             desired_change = await action_houses_city.take_player_input(self, extra_display_info=extra_info)
             match desired_change:
@@ -186,7 +187,7 @@ class GameLogic_async:
                         diff+=1
         else:
             pass # we dont execute the requested changes
-        self.broadcast_gamestate()
+        await self.broadcast_gamestate()
         print(f"[GAME FLOW] {self.currently_playing_client.name} exited the buy/sell houses inner loop")
 
     async def __buysell_houses(self):
@@ -237,6 +238,7 @@ class GameLogic_async:
                 case 'return':
                     finished = True
                 case _:
+                    print("Impossible city selected", choice)
                     raise RuntimeError("Unreachable")
         print("[GAME FLOW] Player is exiting the buy houses menu")
 

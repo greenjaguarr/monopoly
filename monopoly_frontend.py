@@ -22,13 +22,16 @@ SPACE_SIZE = SCREENSIZE//12
 FPS = 10
 
 class Player_representation:  #NOTE doing this representaion is smart and I will do so in the future, but i wont do it right now
-    def __init__(self, name:str, position:int, money:int, jailtime:int, has_lost:bool, properties:List[int]):
+    def __init__(self, name:str, position:int, money:int, jailtime:int, has_lost:bool, properties:List[int], completed_sets:List[str]):
         self.name = name
         self.position= position
         self.money = money
         self.jailtime = jailtime
         self.has_lost = has_lost
         self.properties = properties # This is just tje Property.position
+        self.completed_sets = completed_sets
+    def __repr__(self):
+        return f"Player(name={self.name}, position={self.position}, money={self.money})"
 
 class Board_representation:
     def __init__(self, spaces:dict):
@@ -40,6 +43,8 @@ class Board_representation:
         self.spaces = list(spaces.values())
         # print("Making board represenstation, self.spaces")
         # print(self.spaces)
+    def __repr__(self):
+        return f"Board_representation(spaces={self.spaces})"
         
 
 
@@ -322,7 +327,10 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             text = Text_plate(RED, 435, 110, 'select desired house amount', LIGHTGREY, font)
             buttons = []
             for i, option in enumerate(['increase 1', 'increase 2', 'increase 3', 'decrease 1', 'decrease 2', 'decrease 3', 'back', 'finish']):
-                button = Button(550 + 150 * (i // 4), 180 + 100 * (i % 4), 120, 80, option, font, BLUE, CYAN, RED)
+                if option in ['back', 'finish']:
+                    button = Button(550 + 150 * (i % 2), 480, 120, 80, option, font, BLUE, CYAN, RED)
+                else:
+                    button = Button(550 + 150 * (i // 3), 180 + 100 * (i % 3), 120, 80, option, font, BLUE, CYAN, RED)
                 button.draw(screen)
                 buttons.append(button)
             text.draw(screen)
@@ -352,4 +360,4 @@ def draw_game_finished(screen:pygame.Surface, font:pygame.font.Font, winner_name
     finished_text = Text_plate(WHITE, 300, 400, f'Game Over! Winner: {winner_name}', (0, 128, 0), font)
     finished_text.draw(screen)
     pygame.display.flip()  # Update the display to show the game over message
-    pygame.time.delay(1000*10)  # Wait for a few seconds before closing
+    # pygame.time.delay(1000*10)  # Wait for a few seconds before closing
