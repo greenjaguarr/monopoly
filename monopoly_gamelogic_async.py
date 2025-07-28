@@ -31,6 +31,7 @@ class GameLogic_async:
         self.players_iterator = None
         self.waiting_on_client:Optional[Connection] = None
         self.waiting_for_actionType:Optional[str] = None
+        self.game_mode:str
 
 
     # websockets stuff
@@ -139,6 +140,19 @@ class GameLogic_async:
         for _ in range(random.randint(1,50)):
             self.__next_turn()
 
+        # TODO DO different stuff based on the gamemode
+        match self.game_mode:
+            case 'default':
+                pass
+            case "start_with_streets":
+                client = list(self.clients.values())[0]
+                client.money = 100_000
+                for i in range(40):
+                    space = self.board.spaces[i]
+                    if space.purchasable:
+                        space.purchase(client)
+            case _:
+                pass
    
     # Game logic and flow
 

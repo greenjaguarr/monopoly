@@ -39,16 +39,7 @@ async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
         game.startup()
 
         # await game.broadcast_gamestate()
-        print("Sys", sys.argv)
-        if not len(sys.argv) == 1:
-            #  I want to backdoor for testing purposes
-            if sys.argv[1] == 'start_with_streets':
-                client = list(game.clients.values())[0]
-                client.money = 100_000
-                for i in range(40):
-                    space = game.board.spaces[i]
-                    if space.purchasable:
-                        space.purchase(client)
+
         turn = 0
         running = True
         while running:
@@ -277,19 +268,36 @@ async def network_manager(websocket:websockets.ServerProtocol,send_queue:asyncio
     # when I receive a message from a player, that is an action to do something, i will update the players "latest action" variable, and set a asyncio.Event
     print('[INFO] newtowrk manager is closing')
 
-async def main():
-    send_queue = asyncio.Queue()
+def parse_args():
+    print("Usage: python monopoly_server.py <number_of_players (2-8)> [game_mode]")
+    print("Available game modes: start_with_streets")
+    if len(sys.argv) < 2:
+        sys.exit(1)
+    try:
+        num_players = int(sys.argv[1])
+        if not (2 <= num_players <= 8):
+            raise ValueError()
+    except ValueError:
+        print("Error: <number_of_players> must be an integer between 2 and 8.")
+        sys.exit(1)
+    game_mode = sys.argv[2] if len(sys.argv) > 2 else None
+    return num_players, game_mode
 
-    game = GameLogic_async(send_queue)  # Your Game class with players, board, etc.
-    game_task = asyncio.create_task(game_loop(game, send_queue))  # Start de game loop
-    # server_task = serve(network_manager,"IPV4 address", 8000)  # WebSocket server   # send_queue should be an argument but I dont know the syntax
-    server_task = serve(lambda ws: network_manager(ws, send_queue, game), "0.0.0.0", 8000) # this lambda shit is some serious garmet shit from chatgpt
+async def main():
+    num_players, game_mode = parse_args()
+    send_queue = asyncio.Queue()
+    game = GameLogic_async(send_queue)
+    game.number_of_players_to_start = num_players # default 2
+    if game_mode:
+        game.game_mode = game_mode
+    else:
+        game.game_mode = 'default'
+    game_task = asyncio.create_task(game_loop(game, send_queue))
+    server_task = serve(lambda ws: network_manager(ws, send_queue, game), "0.0.0.0", 8000)
     send_task = asyncio.create_task(sender(send_queue, game))
 
     print("[INFO] Server gestart op ws://0.0.0.0:8000")
-    await asyncio.gather(game_task, server_task, send_task)  # Voer beide taken parallel uit
-
-
+    await asyncio.gather(game_task, server_task, send_task)
 
 if __name__ == "__main__":
     asyncio.run(main())
