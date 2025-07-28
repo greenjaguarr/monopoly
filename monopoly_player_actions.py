@@ -13,12 +13,14 @@ class PlayerActionBase:
     valid_actions = {}
     valid_action_replys = {}
 
-    def __init__(self, name, valid_responses:Optional[List[str]] = None):
+    def __init__(self, name, valid_responses:Optional[List[str]] = None, validate_response:Optional[callable] = None):
         self.__add_action('before throw menu', ['throw', 'buy/sell house', 'mortgage', 'request trade'])
         self.__add_action('want to buy property', ['yes', 'no'])
         self.__add_action("buy sell houses city menu",  ['ons dorp', 'arnhem', 'haarlem', 'utrecht', 'groningen', 'den haag', 'rotterdam', 'amsterdam', 'return'])
         self.__add_action('buy sell houses amount 2', ['increase 1','increase 2', 'decrease 1', 'decrease 2', 'back','finish'])
         self.__add_action('buy sell houses amount 3', ['increase 1','increase 2','increase 3', 'decrease 1', 'decrease 2', 'decrease 3', 'back', 'finish'])
+        self.__add_action('offer trade give money amount', ['increase 1', 'decrease 1','increase 10', 'decrease 10','increase 100', 'decrease 100',])
+        self.__add_action('offer trade get money amount', ['increase 1', 'decrease 1','increase 10', 'decrease 10','increase 100', 'decrease 100',])
 
 
         # self.__add_action('confirm trade proposal', ['confirm', 'cancel', 'edit'])
@@ -37,12 +39,16 @@ class PlayerActionBase:
         # print('[DEBUG]', self.valid_actions)
         # print('[DEBUG]', self.valid_action_replys)
 
+        if validate_response:
+            self.__add_action(name, [])
+
     def __add_action(self, action_type:str, valid_responses:List[str])->None:
         self.valid_actions.update({action_type: valid_responses})
         self.valid_action_replys.update({f'{action_type} reply': valid_responses})
 
     @classmethod
     def is_valid_action_type(cls, action_type: str) -> bool:
+        # print("[DEBUG] euhm", action_type,  cls.valid_actions)
         return action_type in cls.valid_actions
     
     @classmethod
@@ -65,7 +71,7 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
         validate_response: Optional[callable] = None,
         target_player: Optional[Connection] = None
     ):
-        super().__init__(name, valid_responses)
+        super().__init__(name, validate_response = validate_response, valid_responses = valid_responses)
         self.action_type = name
         self.reply_type = f"{name} reply"
         self.choice = None
@@ -94,6 +100,7 @@ class PlayerActionRequest(PlayerActionBase):  # maybe instead of valid-responses
             )
 
         if not self.is_valid_action_type(name):
+            print("[ERROR] invalid action type, the valid action types are ", self.valid_actions)
             raise ValueError(f"Invalid action type: {name}")
 
     def __repr__(self) -> str:

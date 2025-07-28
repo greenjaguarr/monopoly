@@ -283,6 +283,10 @@ class GameLogic_async:
                 'your_properties': [p.name for p in initiator.properties],
                 'target_money': target.money,
                 'target_properties': [p.name for p in target.properties],
+                'get_money': trade['get']['money'],
+                'give_money': trade['give']['money'],
+                'get_properties': [street.name for street in trade['get']['properties']],
+                'give_properties': [street.name for street in trade['give']['properties']]
                 # 'trade': trade
             }
             action = PlayerActionRequest('offer trade build', extra_display_info=extra_info)
@@ -298,21 +302,45 @@ class GameLogic_async:
                 case 'add give money':
                     # Ask how much money to give
                     amount_action = PlayerActionRequest('offer trade give money amount', extra_display_info=extra_info, validate_response=validate_is_a_number)
-                    amount = await amount_action.take_player_input(self)
-                    try:
+                    choice = await amount_action.take_player_input(self)
+                    print("[DEBUG] I have received a message wiht amount action, ", choice)
+
+                    if 'increase ' in choice:
+                        amount = choice[8:]
                         amount = int(amount)
                         if 0 <= amount <= initiator.money:
-                            trade['give']['money'] = amount
-                    except Exception:
-                        pass
-                case 'add get money':
-                    amount_action = PlayerActionRequest('offer trade get money amount', extra_display_info=extra_info, validate_response=validate_is_a_number)
-                    amount = await amount_action.take_player_input(self)
-                    try:
+                            trade['give']['money'] += amount
+                    elif 'decrease' in choice:
+                        amount = choice[8:]
                         amount = int(amount)
-                        if 0 <= amount <= target.money:
-                            trade['get']['money'] = amount
-                    except Exception:
+                        if 0 <= amount <= initiator.money:
+                            trade['give']['money'] -= amount
+                    elif 'set to 0':
+                        trade['give']['money'] = 0
+                    elif 'finish':
+                        pass
+
+
+
+                case 'add get money':
+                    # Ask how much money to get
+                    amount_action = PlayerActionRequest('offer trade get money amount', extra_display_info=extra_info, validate_response=validate_is_a_number)
+                    choice = await amount_action.take_player_input(self)
+                    print("[DEBUG] I have received a message wiht amount action, ", choice)
+
+                    if 'increase ' in choice:
+                        amount = choice[8:]
+                        amount = int(amount)
+                        if 0 <= amount <= initiator.money:
+                            trade['get']['money'] += amount
+                    elif 'decrease' in choice:
+                        amount = choice[8:]
+                        amount = int(amount)
+                        if 0 <= amount <= initiator.money:
+                            trade['get']['money'] -= amount
+                    elif 'set to 0':
+                        trade['get']['money'] = 0
+                    elif 'finish':
                         pass
                 case 'add give property':
                     # Choose property to give
@@ -438,6 +466,7 @@ class GameLogic_async:
                     accepted: bool = await self.__offer_trade_accept(initiate_uuid, target_uuid, trade_suggestion)
                     if accepted:
                         # Execute the trade
+                        print("[INFO] A trade has succesfully been made, executing it. TRADE: " , trade_suggestion)
                         initiator = self.clients[initiate_uuid]
                         target = self.clients[target_uuid]
                         # Transfer money

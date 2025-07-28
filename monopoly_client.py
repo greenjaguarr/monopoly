@@ -125,6 +125,16 @@ async def pygame_loop(websocket, send_queue: asyncio.Queue):
                                     reply = PlayerActionReply(action_reply)
                                     msg = reply.serialise_reply()
                                     await send_queue.put(msg)
+                                case 'offer trade give money amount' | 'offer trade get money amount':
+                                    choice = button.text
+                                    action_reply = {
+                                        'type': 'action',
+                                        'action type': shared_action_request.reply_type,
+                                        'choice': choice
+                                    }
+                                    reply = PlayerActionReply(action_reply)
+                                    msg = reply.serialise_reply()
+                                    await send_queue.put(msg)
                                 case _:
                                     print("[WARNING] unknown action type", shared_action_request.action_type)
                             await asyncio.sleep(0.1)

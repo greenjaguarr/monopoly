@@ -375,7 +375,22 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
                 pass
 
         case "offer trade build":
-            text = Text_plate(RED, 400, 500, 'Pick an option', LIGHTGREY, font)
+            addition_info = request.extra_display_info
+            print("[DEBUG] trying to draw menu with trade offer info", addition_info)
+            give_money = addition_info.get("give_money", 0)              
+            get_money = addition_info.get("get_money", 0)              
+            give_properties = addition_info.get("give_properties", [])   
+            get_properties = addition_info.get("get_properties", [])   
+
+            text_get_money = Text_plate(RED, 400, 240, f'You receive: €{get_money}', LIGHTGREY, font)
+            text_get_money.draw(screen)
+            text_give_money = Text_plate(RED, 400, 280, f'You give: €{give_money}', LIGHTGREY, font)
+            text_give_money.draw(screen)
+            text_get_properties = Text_plate(RED, 400, 320, f'You receive properties: {", ".join(get_properties) if get_properties else "None"}', LIGHTGREY, font)
+            text_get_properties.draw(screen)
+            text_give_properties = Text_plate(RED, 400, 360, f'You give properties: {", ".join(give_properties) if give_properties else "None"}', LIGHTGREY, font)
+            text_give_properties.draw(screen)
+            text = Text_plate(RED, 400, 400, 'Pick an option', LIGHTGREY, font)
             text.draw(screen)
             buttons = []
             if request:
@@ -510,6 +525,27 @@ def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen
             else:
                 print(f"[WARNING] action type {action_type_requested} requires request.valid_responses")
                 return []
+            
+        case 'offer trade give money amount' | 'offer trade get money amount':
+            text = Text_plate(RED, 400, 500, 'Set the amount of money:', LIGHTGREY, font)
+            text.draw(screen)
+            buttons = []
+            options = [
+                ('increase 1', 300, 600),
+                ('increase 10', 400, 600),
+                ('increase 100', 500, 600),
+                ('set to 0', 600, 600),
+                ('decrease 1', 300, 700),
+                ('decrease 10', 400, 700),
+                ('decrease 100', 500, 700),
+                ('finish', 600, 700)
+            ]
+            for label, x, y in options:
+                button = Button(x, y, 100, 100, label, font, BLUE, CYAN, RED)
+                button.draw(screen)
+                buttons.append(button)
+            return buttons
+            
         case _:
             print("Unknown action type", action_type_requested)
             raise RuntimeError("action type that is requested is not recognised")
