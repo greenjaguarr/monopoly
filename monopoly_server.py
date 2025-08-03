@@ -5,9 +5,9 @@ import websockets.exceptions as wsException
 import websockets
 import json
 from monopoly_gamelogic_async import GameLogic_async, Connection, Message, ClientDisconnectedError
+from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
 from typing import Optional, Tuple
 import uuid as Uuid
-from monopoly_player_actions import PlayerActionRequest, PlayerActionReply
 import sys
 import random
 
@@ -33,13 +33,8 @@ def do_sanity_check_on_myself():
 async def game_loop(game:GameLogic_async, send_queue:asyncio.Event):
     assert send_queue == game.send_queue
     try:
-        #game.play() # this function should be made async. At several moments, it needs to wait for player input. It does this by awaiting an asyncio.Event
-        # a = input("Put input here to stop")
         await game.wait_for_players_to_join()
         game.startup()
-
-        # await game.broadcast_gamestate()
-
         turn = 0
         running = True
         while running:
@@ -272,7 +267,7 @@ def parse_args():
     print("Usage: python monopoly_server.py <number_of_players (2-8)> [game_mode]")
     print("Available game modes: start_with_streets")
     if len(sys.argv) < 2:
-        sys.exit(1)
+        return None, None
     try:
         num_players = int(sys.argv[1])
         if not (2 <= num_players <= 8):
@@ -287,7 +282,7 @@ async def main():
     num_players, game_mode = parse_args()
     send_queue = asyncio.Queue()
     game = GameLogic_async(send_queue)
-    game.number_of_players_to_start = num_players # default 2
+    game.number_of_players_to_start = num_players if num_players else 2# default 2
     if game_mode:
         game.game_mode = game_mode
     else:

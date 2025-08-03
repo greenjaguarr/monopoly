@@ -616,6 +616,7 @@ class GameLogic_async:
             else:
                 for p in client.properties:
                     p.owner = None
+                client.properties = []
         if not_finished_count<2:
             self.finished = True
             for client in self.clients.values():

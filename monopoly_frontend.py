@@ -246,10 +246,10 @@ def draw_players(screen:pygame.Surface, players:List[Player_representation], fon
         __draw_player_info(player, i, font, screen, board)
 
 def __draw_player_info(player:Player_representation, i:int, font, screen, board:Board_representation):
-    y_start = 150 + 150*i
-    text_name = Text_plate(RED, 200, y_start, f'PLayer {player.name}', LIGHTGREY, font)
+    y_start = 150 + 130*i
+    text_name = Text_plate(RED, 160, y_start, f'PLayer {player.name}', LIGHTGREY, font)
     text_name.draw(screen)
-    text_money = Text_plate(RED, 200, y_start + 30, f'Money: {player.money}', LIGHTGREY, font)
+    text_money = Text_plate(RED, 160, y_start + 30, f'Money: {player.money}', LIGHTGREY, font)
     text_money.draw(screen)
     if player.has_lost: return # dont draw the rest
     this_players_properties_positions = sorted(player.properties)
@@ -269,12 +269,12 @@ def __draw_player_info(player:Player_representation, i:int, font, screen, board:
         properties_names_2 = properties_names[10:]
         properties_str_1 = ", ".join(properties_names_1)
         properties_str_2 = ", ".join(properties_names_2)
-        text_properties_1 = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str_1}', LIGHTGREY, font)
+        text_properties_1 = Text_plate(RED, 160, y_start + 60, f'Properties: {properties_str_1}', LIGHTGREY, font)
         text_properties_1.draw(screen)
-        text_properties_2 = Text_plate(RED, 200, y_start + 90, f'{properties_str_2}', LIGHTGREY, font)
+        text_properties_2 = Text_plate(RED, 160, y_start + 90, f'{properties_str_2}', LIGHTGREY, font)
         text_properties_2.draw(screen)
     else:
-        text_properties = Text_plate(RED, 200, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
+        text_properties = Text_plate(RED, 160, y_start + 60, f'Properties: {properties_str}', LIGHTGREY, font)
         text_properties.draw(screen)
 
 def draw_action_request(action_type_requested:str, font:pygame.font.Font, screen:pygame.Surface, addition_info = None, request:Optional[PlayerActionRequest] = None)->List[Button]:
